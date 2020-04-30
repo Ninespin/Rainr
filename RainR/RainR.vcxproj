@@ -87,10 +87,10 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\x86\include;$(ProjectDir)\externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\include;$(ProjectDir)\externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(ProjectDir)\externals\glew\lib\Release\Win32;$(ProjectDir)\externals\glfw\x86\bin;$(ProjectDir)\externals\assimp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)\externals\glew\lib\Release\Win32;$(ProjectDir)\externals\glfw\bin;$(ProjectDir)\externals\assimp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32.lib;assimp-vc141-mt.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
