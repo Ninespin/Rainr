@@ -415,7 +415,7 @@ int main(int argc, char** argv)
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_group_size_z);
 		std::cout << "Maximum compute work group count: " << max_group_size_x
 			<< ", " << max_group_size_y << ", " << max_group_size_z << std::endl;
-
+		
 
 		run(window);
 
