@@ -5,6 +5,10 @@
 #include <thread>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+
+
 
 #include "Timer.h"
 
@@ -392,6 +396,9 @@ int main(int argc, char** argv)
 
 	try
 	{
+		Assimp::Importer importer;
+		const aiScene* pScene = importer.ReadFile("church1.flt", 0);
+
 
 		glfwInit();
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
