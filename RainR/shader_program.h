@@ -6,14 +6,6 @@
 
 class ShaderProgram
 {
-	enum class shader_type : unsigned int
-	{
-		VERT = 0x01,
-		FRAG = 0x02,
-		GEOM = 0x04,
-		TESS = 0x08,
-		COMP = 0x10
-	};
 	typedef std::map<GLenum, std::string> ShaderPathMap_t;
 	typedef std::map<GLenum, GLuint> ShaderMap_t;
 public:

@@ -144,10 +144,13 @@
   <ItemGroup>
     <ClCompile Include="shader_program.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="texture2d.cpp" />
     <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="i_texture.h" />
     <ClInclude Include="shader_program.h" />
+    <ClInclude Include="texture2d.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>

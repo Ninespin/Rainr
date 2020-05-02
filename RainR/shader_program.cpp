@@ -6,7 +6,7 @@
 const size_t ShaderProgram::ERROR_LOG_SZ = 512;
 
 ShaderProgram::ShaderProgram()
-	: mHandle( 0 )
+	: mHandle(0)
 {
 }
 
