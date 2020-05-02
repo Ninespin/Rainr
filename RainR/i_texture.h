@@ -18,6 +18,10 @@ public:
 	{
 		generate();
 	}
+	~TextureBase()
+	{
+		glDeleteTextures(1, &mHandle);
+	}
 
 	void bind() override 
 	{
