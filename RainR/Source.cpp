@@ -8,9 +8,8 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 
-
-
 #include "Timer.h"
+#include "shader_program.h"
 
 using namespace std::chrono_literals;
 
@@ -76,54 +75,9 @@ const unsigned int PARTICLE_QUAD_ELEMENT_DATA[] = {
 };
 
 
-const char* VERTEX_SHADER = 
-"#version 450 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec4 aColor;\n"
-"layout(location = 4) in vec4 aOffs;\n"
-"out vec4 color;\n"
-"\n"
-"void main()\n"
-"{\n"
-"	vec3 pos = aPos + aOffs.xyz;\n"
-"	color = aColor;\n"
-"	gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);\n"
-"}";
-
-const char* FRAGMENT_SHADER = 
-"#version 450 core\n"
-"in vec4 color;\n"
-"out vec4 FragColor; \n"
-"\n"
-"void main()\n"
-"{\n"
-"	FragColor = color; \n"
-"}";
-
-const char* COMPUTE_SHADER =
-"#version 450 core\n"
-"#extension GL_ARB_compute_shader				: enable\n"
-"#extension GL_ARB_shader_storage_buffer_object : enable\n"
-"#extension GL_ARB_compute_variable_group_size  : enable\n"
-"layout(std140, binding = 0) buffer offs{\n"
-"  vec4 offsets[];\n"
-"};\n"
-"layout(local_size_variable) in;\n"
-"\n"
-"vec4 velocity = vec4(0.001, -0.01, 0, 0);\n"
-"void main(){\n"
-"  uint gid = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x;\n"
-"  vec4 off = offsets[ gid ];\n"
-"  for(int i = 0; i < 100; i++){\n"
-"    velocity.x += fract(tan(velocity.x));\n"
-"    velocity.y += atan(fract(cos(velocity.x)));\n"
-"  }\n"
-"  off = off + velocity;\n"
-"  off.x = mod(off.x + 1, 2)-1;\n"
-"  off.y = mod(off.y + 1, 2)-1;\n"
-"  offsets[ gid ] = off;\n"
-"\n"
-"}\n";
+const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.vert";
+const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
+const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
 
 Vec2 random_v2()
@@ -180,7 +134,7 @@ GLuint create_shader(GLenum type, const char* source)
 
 GLuint create_compute_program()
 {
-	const GLuint compute_shader = create_shader(GL_COMPUTE_SHADER, COMPUTE_SHADER);
+	const GLuint compute_shader = create_shader(GL_COMPUTE_SHADER, COMPUTE_SHADER_PATH);
 	const GLuint program = glCreateProgram();
 	glAttachShader(program, compute_shader);
 	glLinkProgram(program);
@@ -201,8 +155,8 @@ GLuint create_compute_program()
 
 GLuint create_shader_program()
 {
-	const GLuint vertex_shader = create_shader(GL_VERTEX_SHADER, VERTEX_SHADER);
-	const GLuint fragment_shader = create_shader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER);
+	const GLuint vertex_shader = create_shader(GL_VERTEX_SHADER, VERTEX_SHADER_PATH);
+	const GLuint fragment_shader = create_shader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER_PATH);
 	const GLuint program = glCreateProgram();
 	glAttachShader(program, vertex_shader);
 	glAttachShader(program, fragment_shader);
@@ -278,11 +232,17 @@ void run(GLFWwindow* window)
 {
 	// data init
 	// load shader program
-	const GLuint shader_program = create_shader_program();
-	glUseProgram(shader_program);
-
+	ShaderProgram shader_program;
+	shader_program.mShaderPaths[GL_VERTEX_SHADER] = VERTEX_SHADER_PATH;
+	shader_program.mShaderPaths[GL_FRAGMENT_SHADER] = FRAGMENT_SHADER_PATH;
+	shader_program.load();
+	shader_program.useProgram();
+	
 	// load compute shader program
-	const GLuint compute_program = create_compute_program();
+	ShaderProgram compute_program;
+	compute_program.mShaderPaths[GL_COMPUTE_SHADER] = COMPUTE_SHADER_PATH;
+	compute_program.load();
+	compute_program.useProgram();
 
 	// load particle vertex data
 	GLuint particle_vao;
@@ -345,7 +305,8 @@ void run(GLFWwindow* window)
 
 		// update
 		// compute shader update particle offsets
-		glUseProgram(compute_program);
+
+		compute_program.useProgram();
 		glDispatchComputeGroupSizeARB(
 			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
 			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
@@ -353,7 +314,7 @@ void run(GLFWwindow* window)
 
 		// render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glUseProgram(shader_program);
+		shader_program.useProgram();
 		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);\
 		
 		// events and swaps
@@ -398,6 +359,7 @@ int main(int argc, char** argv)
 	{
 		Assimp::Importer importer;
 		const aiScene* pScene = importer.ReadFile("church1.flt", 0);
+		
 
 
 		glfwInit();

@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{22d069ac-b6e7-4f63-89e2-d7ac209b16bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\default">
+      <UniqueIdentifier>{8e7daa8b-851e-4ad5-bd97-45ee2072e827}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\compute rain pos">
+      <UniqueIdentifier>{95b6de9b-31d9-4176-bba5-4017f07e4648}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -21,10 +30,27 @@
     <ClCompile Include="Timer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="shader_program.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="shader_program.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\default.frag">
+      <Filter>Shaders\default</Filter>
+    </None>
+    <None Include="shaders\default.vert">
+      <Filter>Shaders\default</Filter>
+    </None>
+    <None Include="shaders\compute.glsl">
+      <Filter>Shaders\compute rain pos</Filter>
+    </None>
   </ItemGroup>
 </Project>
