@@ -8,8 +8,13 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 
-#include "Timer.h"
+#include "timer.h"
 #include "shader_program.h"
+#include "vectors.h"
+#include "random.h"
+#include "frame_buffer.h"
+#include "render_buffer.h"
+#include "texture2d.h"
 
 using namespace std::chrono_literals;
 
@@ -36,20 +41,7 @@ typedef struct
 	GLuint baseInstance;
 }DrawElementsIndirectCommand;
 
-typedef struct
-{
-	float x, y;
-} Vec2;
 
-typedef struct
-{
-	float x, y, z;
-} Vec3;
-
-typedef struct
-{
-	float x, y, z, w;
-} Vec4;
 
 const float WINDOW_WT = 1920;
 const float WINDOW_HT = 1080;
@@ -70,7 +62,21 @@ const Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
 	{ QUAD_WT,  QUAD_WT, 0},
 };
 
-const unsigned int PARTICLE_QUAD_ELEMENT_DATA[] = {
+const Vec3 SCREEN_QUAD_VERTEX_DATA[] = {
+	{-1, -1, 0},
+	{ 1, -1, 0},
+	{-1,  1, 0},
+	{ 1,  1, 0},
+};
+const Vec2 SCREEN_QUAD_UV_DATA[] = {
+	{0, 0},
+	{1, 0},
+	{0, 1},
+	{1, 1},
+};
+
+
+const unsigned int STANDARD_QUAD_ELEMENT_DATA[] = {
 	0, 1, 2, 3
 };
 
@@ -80,102 +86,6 @@ const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/sha
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
 
-Vec2 random_v2()
-{
-	Vec2 v;
-	v.x = ((float)rand() / (RAND_MAX)) * 2 - 1;
-	v.y = ((float)rand() / (RAND_MAX)) * 2 - 1;
-	return v;
-}
-Vec3 random_v3()
-{
-	Vec3 v;
-	v.x = ((float)rand() / (RAND_MAX)) * 2 - 1;
-	v.y = ((float)rand() / (RAND_MAX)) * 2 - 1;
-	v.z = ((float)rand() / (RAND_MAX)) * 2 - 1;
-	return v;
-}
-Vec4 random_v4()
-{
-	Vec4 v;
-	v.x = ((float)rand() / RAND_MAX) * 2 - 1;
-	v.y = ((float)rand() / RAND_MAX) * 2 - 1;
-	v.z = ((float)rand() / RAND_MAX) * 2 - 1;
-	v.w = ((float)rand() / RAND_MAX) * 2 - 1;
-	return v;
-}
-Vec4 random_v4_0_1()
-{
-	Vec4 v;
-	v.x = (float)rand() / RAND_MAX;
-	v.y = (float)rand() / RAND_MAX;
-	v.z = (float)rand() / RAND_MAX;
-	v.w = (float)rand() / RAND_MAX;
-	return v;
-}
-
-GLuint create_shader(GLenum type, const char* source)
-{
-	const GLuint handle = glCreateShader(type);
-	glShaderSource(handle, 1, &source, nullptr);
-	glCompileShader(handle);
-	int success;
-	char log[512];
-	glGetShaderiv(handle, GL_COMPILE_STATUS, &success);
-	if(!success)
-	{
-		glGetShaderInfoLog(handle, sizeof(log), nullptr, log);
-		std::stringstream ss;
-		ss << "Failed to create shader: " << log << std::endl;
-		throw new std::exception(ss.str().c_str());
-	}
-	return handle;
-}
-
-GLuint create_compute_program()
-{
-	const GLuint compute_shader = create_shader(GL_COMPUTE_SHADER, COMPUTE_SHADER_PATH);
-	const GLuint program = glCreateProgram();
-	glAttachShader(program, compute_shader);
-	glLinkProgram(program);
-	glDeleteShader(compute_shader);
-	int success;
-	char log[512];
-	glGetProgramiv(program, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		glGetProgramInfoLog(program, sizeof(log), NULL, log);
-		std::stringstream ss;
-		ss << "Failed to link compute program: " << log << std::endl;
-		throw new std::exception(ss.str().c_str());
-	}
-
-	return program;
-}
-
-GLuint create_shader_program()
-{
-	const GLuint vertex_shader = create_shader(GL_VERTEX_SHADER, VERTEX_SHADER_PATH);
-	const GLuint fragment_shader = create_shader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER_PATH);
-	const GLuint program = glCreateProgram();
-	glAttachShader(program, vertex_shader);
-	glAttachShader(program, fragment_shader);
-	glLinkProgram(program);
-	glDeleteShader(vertex_shader);
-	glDeleteShader(fragment_shader);
-	int success;
-	char log[512];
-	glGetProgramiv(program, GL_LINK_STATUS, &success);
-	if(!success)
-	{
-		glGetProgramInfoLog(program, sizeof(log), NULL, log);
-		std::stringstream ss;
-		ss << "Failed to link shader program: " << log << std::endl;
-		throw new std::exception(ss.str().c_str());
-	}
-
-	return program;
-}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -206,6 +116,7 @@ void process_input(GLFWwindow* window)
 	}
 }
 
+// FIXME: move away
 void setup_ssbo(GLuint& ssbo, Vec4 (*rand_fn)())
 {
 	glGenBuffers(1, &ssbo);
@@ -244,6 +155,13 @@ void run(GLFWwindow* window)
 	compute_program.load();
 	compute_program.useProgram();
 
+	ShaderProgram postProcess_program;
+	postProcess_program.mShaderPaths[GL_VERTEX_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.vert";
+	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.frag";
+	postProcess_program.load();
+	postProcess_program.useProgram();
+
+
 	// load particle vertex data
 	GLuint particle_vao;
 	glGenVertexArrays(1, &particle_vao);
@@ -253,8 +171,8 @@ void run(GLFWwindow* window)
 	GLuint particle_ebo;
 	glGenBuffers(1, &particle_ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle_ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(PARTICLE_QUAD_ELEMENT_DATA),
-		PARTICLE_QUAD_ELEMENT_DATA, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(STANDARD_QUAD_ELEMENT_DATA),
+		STANDARD_QUAD_ELEMENT_DATA, GL_STATIC_DRAW);
 
 	// vertex
 	GLuint particle_quad_buffer;
@@ -267,7 +185,7 @@ void run(GLFWwindow* window)
 
 	// colors
 	GLuint particle_color_buffer;
-	setup_ssbo(particle_color_buffer, random_v4_0_1);
+	setup_ssbo(particle_color_buffer, Random::random_v4_normalized);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_color_buffer);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
 	glEnableVertexAttribArray(1);
@@ -275,7 +193,7 @@ void run(GLFWwindow* window)
 
 	// offsets
 	GLuint particle_offset_buffer;
-	setup_ssbo(particle_offset_buffer, random_v4);
+	setup_ssbo(particle_offset_buffer, Random::random_v4);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_offset_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_offset_buffer);
 	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
@@ -289,6 +207,64 @@ void run(GLFWwindow* window)
 	glGenBuffers(1, &indirect_buffer);
 	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indirect_buffer);
 	glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(DrawElementsIndirectCommand), &drawCommand, GL_STATIC_DRAW);
+
+
+	// screen quad
+
+	// load particle vertex data
+	GLuint screen_vao;
+	glGenVertexArrays(1, &screen_vao);
+	glBindVertexArray(screen_vao);
+	// element indices
+	GLuint screen_ebo;
+	glGenBuffers(1, &screen_ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, screen_ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(STANDARD_QUAD_ELEMENT_DATA),
+		STANDARD_QUAD_ELEMENT_DATA, GL_STATIC_DRAW);
+
+	// vertex
+	GLuint screen_quad_buffer;
+	glGenBuffers(1, &screen_quad_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(SCREEN_QUAD_VERTEX_DATA),
+		SCREEN_QUAD_VERTEX_DATA, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), nullptr);
+	glEnableVertexAttribArray(0);
+
+	// uv
+	GLuint screen_uv_buffer;
+	glGenBuffers(1, &screen_uv_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, screen_uv_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(SCREEN_QUAD_UV_DATA),
+		SCREEN_QUAD_UV_DATA, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vec2), nullptr);
+	glEnableVertexAttribArray(1);
+
+	///////
+
+	Texture2D colorTexture(WINDOW_WT, WINDOW_HT, GL_LINEAR, GL_LINEAR, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE);
+	RenderBuffer depthBuffer(WINDOW_WT, WINDOW_HT, GL_DEPTH24_STENCIL8);
+	FrameBuffer frameBuffer;
+	frameBuffer.bind();
+	frameBuffer.attachTexture2D(GL_COLOR_ATTACHMENT0, colorTexture);
+	frameBuffer.attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, depthBuffer);
+	
+	// FIXME: move that to FrameBuffer
+	GLenum drawbuffers[1] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, drawbuffers);
+	
+	if(!frameBuffer.checkCompleteness())
+	{
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is incomplete!" << std::endl;
+		frameBuffer.unbind();
+	}
+
+	GLuint screenTextureUniformLoc = glGetUniformLocation(postProcess_program.mHandle, "screenTexture");
+	glUniform1i(screenTextureUniformLoc, 0);
+	///////
+
+
+
 
 
 	Timer timer;
@@ -312,11 +288,22 @@ void run(GLFWwindow* window)
 			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
 		//glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
 
-		// render
+		// render offscreen
+		frameBuffer.bind();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
-		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);\
+		glBindVertexArray(particle_vao);
+		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
+		frameBuffer.unbind();
+
+		// render onscreen
+		glClear(GL_COLOR_BUFFER_BIT);
+		postProcess_program.useProgram();
+		glBindVertexArray(screen_vao);
+		colorTexture.bind();
+		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 		
+
 		// events and swaps
 		glfwSwapBuffers(window);
 		glfwPollEvents();

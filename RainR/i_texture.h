@@ -6,6 +6,7 @@ class ITexture
 {
 public:
 	virtual void bind() = 0;
+	virtual void unbind() = 0;
 protected:
 };
 
@@ -26,6 +27,11 @@ public:
 	void bind() override 
 	{
 		glBindTexture(GL_TEXTURE_2D, mHandle);
+	}
+
+	void unbind() override
+	{
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
 	void setParameter(GLenum parameter, GLint value) const

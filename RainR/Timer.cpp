@@ -1,4 +1,4 @@
-#include "Timer.h"
+#include "timer.h"
 
 Timer::handle_t Timer::current_available_handle_ = 0;
 

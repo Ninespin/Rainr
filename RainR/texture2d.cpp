@@ -12,9 +12,11 @@ Texture2D::Texture2D(unsigned int width, unsigned int height, GLint magMode = GL
 	, mFormat(format)
 	, mDataType(dataType)
 {
+	TextureBase::bind();
 	allocate();
 	setParameter(GL_TEXTURE_MAG_FILTER, mMagMode);
 	setParameter(GL_TEXTURE_MIN_FILTER, mMinMode);
+	TextureBase::unbind();
 }
 
 Texture2D::~Texture2D()
