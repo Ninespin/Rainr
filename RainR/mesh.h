@@ -1,0 +1,44 @@
+#pragma once
+#include <GL/glew.h>
+#include <assimp/mesh.h>
+#include <vector>
+#include "vertex_buffer_object.h"
+#include "element_buffer_object.h"
+
+class Mesh
+{
+public:
+
+	enum AttribLocations: unsigned int
+	{
+		ATTRIB_VERTEX = 0,
+		ATTRIB_NORMALS = 2,
+		ATTRIB_COLOR = 3,
+		ATTRIB_SECONDARY_COLOR = 4,
+		ATTRIB_FOG_COORD = 5,
+		ATTRIB_MULTI_TEX_COORD_0 = 8,
+		ATTRIB_MULTI_TEX_COORD_1,
+		ATTRIB_MULTI_TEX_COORD_2,
+		ATTRIB_MULTI_TEX_COORD_3,
+		ATTRIB_MULTI_TEX_COORD_4,
+		ATTRIB_MULTI_TEX_COORD_5,
+		ATTRIB_MULTI_TEX_COORD_6,
+		ATTRIB_MULTI_TEX_COORD_7,
+	};
+public:
+	Mesh(aiMesh& mesh);
+	~Mesh();
+	void bind();
+
+public:
+	aiMesh* mMesh;
+	GLuint mVao;
+	VertexBufferObject<aiVector3D>* mVerticesVBO;
+	VertexBufferObject<aiVector3D>* mNormalsVBO;
+	ElementBufferObject<GLuint>* mEbo;
+	unsigned int mEboSize;
+	GLuint fake[36];
+
+
+};
+

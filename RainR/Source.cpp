@@ -7,6 +7,10 @@
 #include <GLFW/glfw3.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
+#include <gtc/type_ptr.hpp>
 
 #include "timer.h"
 #include "shader_program.h"
@@ -15,6 +19,9 @@
 #include "frame_buffer.h"
 #include "render_buffer.h"
 #include "texture2d.h"
+#include "vertex_buffer_object.h"
+#include "mesh.h"
+#include "element_buffer_object.h"
 
 using namespace std::chrono_literals;
 
@@ -55,28 +62,27 @@ const bool USE_VSYNC = false;
 const bool USE_SOFT_TIMED_VSYNC = false;
 const bool LOG_DT = true;
 
-const Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
+Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
 	{-QUAD_WT, -QUAD_WT, 0},
 	{ QUAD_WT, -QUAD_WT, 0},
 	{-QUAD_WT,  QUAD_WT, 0},
 	{ QUAD_WT,  QUAD_WT, 0},
 };
 
-const Vec3 SCREEN_QUAD_VERTEX_DATA[] = {
+Vec3 SCREEN_QUAD_VERTEX_DATA[] = {
 	{-1, -1, 0},
 	{ 1, -1, 0},
 	{-1,  1, 0},
 	{ 1,  1, 0},
 };
-const Vec2 SCREEN_QUAD_UV_DATA[] = {
+Vec2 SCREEN_QUAD_UV_DATA[] = {
 	{0, 0},
 	{1, 0},
 	{0, 1},
 	{1, 1},
 };
 
-
-const unsigned int STANDARD_QUAD_ELEMENT_DATA[] = {
+unsigned int STANDARD_QUAD_ELEMENT_DATA[] = {
 	0, 1, 2, 3
 };
 
@@ -85,7 +91,9 @@ const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shade
 const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
-
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -113,7 +121,18 @@ void process_input(GLFWwindow* window)
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
+		return;
 	}
+
+	const float cameraSpeed = 5.f; // adjust accordingly
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		cameraPos += cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		cameraPos -= cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
 
 // FIXME: move away
@@ -148,6 +167,9 @@ void run(GLFWwindow* window)
 	shader_program.mShaderPaths[GL_FRAGMENT_SHADER] = FRAGMENT_SHADER_PATH;
 	shader_program.load();
 	shader_program.useProgram();
+
+	// camera
+	glm::mat4 view;
 	
 	// load compute shader program
 	ShaderProgram compute_program;
@@ -155,6 +177,7 @@ void run(GLFWwindow* window)
 	compute_program.load();
 	compute_program.useProgram();
 
+	// load post-processing shader program
 	ShaderProgram postProcess_program;
 	postProcess_program.mShaderPaths[GL_VERTEX_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.vert";
 	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.frag";
@@ -166,24 +189,11 @@ void run(GLFWwindow* window)
 	GLuint particle_vao;
 	glGenVertexArrays(1, &particle_vao);
 	glBindVertexArray(particle_vao);
-
-	// element indices
-	GLuint particle_ebo;
-	glGenBuffers(1, &particle_ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, particle_ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(STANDARD_QUAD_ELEMENT_DATA),
-		STANDARD_QUAD_ELEMENT_DATA, GL_STATIC_DRAW);
-
-	// vertex
-	GLuint particle_quad_buffer;
-	glGenBuffers(1, &particle_quad_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, particle_quad_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(PARTICLE_QUAD_VERTEX_DATA), 
-		PARTICLE_QUAD_VERTEX_DATA, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), nullptr);
-	glEnableVertexAttribArray(0);
+	ElementBufferObject<GLuint> particleEbo = ElementBufferObject<GLuint>(GL_STATIC_DRAW, 4, STANDARD_QUAD_ELEMENT_DATA);
+	VertexBufferObject<Vec3> particleVerticeVBO = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(PARTICLE_QUAD_VERTEX_DATA), PARTICLE_QUAD_VERTEX_DATA, false, 0);
 
 	// colors
+	//VertexBufferObject<Vec4> particleColorVBO = VertexBufferObject<Vec4>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, , PARTICLE_QUAD_VERTEX_DATA, false, 0);
 	GLuint particle_color_buffer;
 	setup_ssbo(particle_color_buffer, Random::random_v4_normalized);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_color_buffer);
@@ -215,30 +225,10 @@ void run(GLFWwindow* window)
 	GLuint screen_vao;
 	glGenVertexArrays(1, &screen_vao);
 	glBindVertexArray(screen_vao);
-	// element indices
-	GLuint screen_ebo;
-	glGenBuffers(1, &screen_ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, screen_ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(STANDARD_QUAD_ELEMENT_DATA),
-		STANDARD_QUAD_ELEMENT_DATA, GL_STATIC_DRAW);
+	ElementBufferObject<GLuint> screenEbo = ElementBufferObject<GLuint>(GL_STATIC_DRAW, 4, STANDARD_QUAD_ELEMENT_DATA);
+	VertexBufferObject<Vec3> screenVerticesVBO = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(SCREEN_QUAD_VERTEX_DATA), SCREEN_QUAD_VERTEX_DATA, false, 0);
+	VertexBufferObject<Vec2> screenUVVBO = VertexBufferObject<Vec2>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 2, sizeof(SCREEN_QUAD_UV_DATA), SCREEN_QUAD_UV_DATA, false, 1);
 
-	// vertex
-	GLuint screen_quad_buffer;
-	glGenBuffers(1, &screen_quad_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(SCREEN_QUAD_VERTEX_DATA),
-		SCREEN_QUAD_VERTEX_DATA, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), nullptr);
-	glEnableVertexAttribArray(0);
-
-	// uv
-	GLuint screen_uv_buffer;
-	glGenBuffers(1, &screen_uv_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, screen_uv_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(SCREEN_QUAD_UV_DATA),
-		SCREEN_QUAD_UV_DATA, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vec2), nullptr);
-	glEnableVertexAttribArray(1);
 
 	///////
 
@@ -264,8 +254,12 @@ void run(GLFWwindow* window)
 	///////
 
 
+	Assimp::Importer importer;
+	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/cube.obj", aiProcess_Triangulate);
+	Mesh m = Mesh(*pScene->mMeshes[0]);
 
 
+	
 
 	Timer timer;
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -280,28 +274,37 @@ void run(GLFWwindow* window)
 		process_input(window);
 
 		// update
-		// compute shader update particle offsets
+		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-		compute_program.useProgram();
-		glDispatchComputeGroupSizeARB(
-			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
-			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
+		GLuint uViewMat = glGetUniformLocation(shader_program.mHandle, "uViewMat");
+		glUniformMatrix4fv(uViewMat, 1, GL_FALSE, glm::value_ptr(view));
+
+		// compute shader update particle offsets
+		//compute_program.useProgram();
+		//glDispatchComputeGroupSizeARB(
+		//	NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
+		//	WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
 		//glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
 
 		// render offscreen
-		frameBuffer.bind();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//frameBuffer.bind();
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
-		glBindVertexArray(particle_vao);
-		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
+		//glBindVertexArray(particle_vao);
+		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
 		frameBuffer.unbind();
 
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		m.bind();
+		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);
+
+
 		// render onscreen
-		glClear(GL_COLOR_BUFFER_BIT);
+		/*glClear(GL_COLOR_BUFFER_BIT);
 		postProcess_program.useProgram();
 		glBindVertexArray(screen_vao);
 		colorTexture.bind();
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);*/
 		
 
 		// events and swaps
@@ -344,10 +347,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		Assimp::Importer importer;
-		const aiScene* pScene = importer.ReadFile("church1.flt", 0);
 		
-
 
 		glfwInit();
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);

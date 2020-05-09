@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClCompile Include="depth_texture_2d.cpp" />
     <ClCompile Include="frame_buffer.cpp" />
+    <ClCompile Include="mesh.cpp" />
     <ClCompile Include="random.cpp" />
     <ClCompile Include="render_buffer.cpp" />
     <ClCompile Include="shader_program.cpp" />
@@ -153,15 +154,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="depth_texture_2d.h" />
+    <ClInclude Include="element_buffer_object.h" />
     <ClInclude Include="frame_buffer.h" />
     <ClInclude Include="i_frame_buffer.h" />
     <ClInclude Include="i_texture.h" />
+    <ClInclude Include="mesh.h" />
     <ClInclude Include="random.h" />
     <ClInclude Include="render_buffer.h" />
     <ClInclude Include="shader_program.h" />
     <ClInclude Include="texture2d.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="vectors.h" />
+    <ClInclude Include="vertex_buffer_object.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\compute.glsl" />
