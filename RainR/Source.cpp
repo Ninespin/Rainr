@@ -52,8 +52,9 @@ typedef struct
 
 const float WINDOW_WT = 1920;
 const float WINDOW_HT = 1080;
-const float QUAD_WT = 0.001;
-const unsigned int NB_PARTICLES = 1024 * 1024 * 8; // 8 M
+const float WINDOW_ASPECT = WINDOW_WT / WINDOW_HT;
+const float QUAD_WT = 1;
+const unsigned int NB_PARTICLES = 1024 /** 1024*/ * 8; // 8 M
 const unsigned int WORKGROUP_SIZE_X = 512;
 const unsigned int WORKGROUP_SIZE_Y = 1;
 const unsigned int NB_WORKGROUPS_X = NB_PARTICLES / (WORKGROUP_SIZE_X * WORKGROUP_SIZE_Y);
@@ -61,6 +62,8 @@ const unsigned int NB_WORKGROUPS_Y = 1;
 const bool USE_VSYNC = false;
 const bool USE_SOFT_TIMED_VSYNC = false;
 const bool LOG_DT = true;
+const float CAMERA_SPEED = 5.0f;
+const float CAMERA_MOUSE_SENSITIVITY = 1.25f;
 
 Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
 	{-QUAD_WT, -QUAD_WT, 0},
@@ -91,13 +94,42 @@ const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shade
 const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 10.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::mat4 projection = glm::perspective(glm::radians(45.0f), WINDOW_ASPECT, 0.1f, 100.0f);
+glm::vec3 cameraYPR = glm::vec3(0.0f);
+float DELTA_TIME = 0;
+float LAST_FRAME_TIME = 0;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double x, double y)
+{
+	static float lastX = x;
+	static float lastY = y;
+	float dx = x - lastX;
+	float dy = lastY - y;
+	lastX = x;
+	lastY = y;
+	cameraYPR.x += dx * CAMERA_MOUSE_SENSITIVITY;
+	cameraYPR.y += dy * CAMERA_MOUSE_SENSITIVITY;
+	if (cameraYPR.y > 89.0f)
+	{
+		cameraYPR.y = 89.0f;
+	}
+	else if (cameraYPR.y < -89.0f)
+	{
+		cameraYPR.y = -89.0f;
+	}
+
+	cameraFront.x = cos(glm::radians(cameraYPR.x)) * cos(glm::radians(cameraYPR.y));
+	cameraFront.y = sin(glm::radians(cameraYPR.y));
+	cameraFront.z = sin(glm::radians(cameraYPR.x)) * cos(glm::radians(cameraYPR.y));
+	cameraFront = glm::normalize(cameraFront);
 }
 
 GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int ht = WINDOW_HT)
@@ -113,18 +145,22 @@ GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int 
 	}
 	glViewport(0, 0, wt, ht);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
 	return window;
 }
 
 void process_input(GLFWwindow* window)
 {
+	// program termination
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
 		return;
 	}
 
-	const float cameraSpeed = 5.f; // adjust accordingly
+	// camera translation
+	const float cameraSpeed = CAMERA_SPEED * DELTA_TIME;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		cameraPos += cameraSpeed * cameraFront;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -133,6 +169,10 @@ void process_input(GLFWwindow* window)
 		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+		cameraPos -= cameraUp * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		cameraPos += cameraUp * cameraSpeed;
 }
 
 // FIXME: move away
@@ -183,7 +223,7 @@ void run(GLFWwindow* window)
 	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.frag";
 	postProcess_program.load();
 	postProcess_program.useProgram();
-
+	postProcess_program.setUniformI("screenTexture", 0);
 
 	// load particle vertex data
 	GLuint particle_vao;
@@ -249,8 +289,6 @@ void run(GLFWwindow* window)
 		frameBuffer.unbind();
 	}
 
-	GLuint screenTextureUniformLoc = glGetUniformLocation(postProcess_program.mHandle, "screenTexture");
-	glUniform1i(screenTextureUniformLoc, 0);
 	///////
 
 
@@ -259,52 +297,53 @@ void run(GLFWwindow* window)
 	Mesh m = Mesh(*pScene->mMeshes[0]);
 
 
-	
+	glm::mat4 viewProj;
 
 	Timer timer;
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
 
 	// main loop
 	while(!glfwWindowShouldClose(window))
 	{
 		static bool unique_dt_log = true;
 		timer.restart();
+		float currentFrameTime = glfwGetTime();
+		DELTA_TIME = currentFrameTime - LAST_FRAME_TIME;
+		LAST_FRAME_TIME = currentFrameTime;
 		
 		// process input
 		process_input(window);
 
 		// update
 		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
-		GLuint uViewMat = glGetUniformLocation(shader_program.mHandle, "uViewMat");
-		glUniformMatrix4fv(uViewMat, 1, GL_FALSE, glm::value_ptr(view));
+		viewProj = projection * view;
 
 		// compute shader update particle offsets
-		//compute_program.useProgram();
-		//glDispatchComputeGroupSizeARB(
-		//	NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
-		//	WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
-		//glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
+		compute_program.useProgram();
+		glDispatchComputeGroupSizeARB(
+			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
+			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
 
 		// render offscreen
-		//frameBuffer.bind();
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		frameBuffer.bind();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
-		//glBindVertexArray(particle_vao);
-		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
+		shader_program.setUniformMat4fv("uViewProj", glm::value_ptr(viewProj));
+		glBindVertexArray(particle_vao);
+		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
+		//frameBuffer.unbind();
+		
+		m.bind();
+		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);//*/
 		frameBuffer.unbind();
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		m.bind();
-		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);
-
-
 		// render onscreen
-		/*glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT);
 		postProcess_program.useProgram();
 		glBindVertexArray(screen_vao);
 		colorTexture.bind();
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);*/
+		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 		
 
 		// events and swaps

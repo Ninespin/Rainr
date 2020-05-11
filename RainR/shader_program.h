@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include <GL/glew.h>
+#include <glm.hpp>
 
 
 class ShaderProgram
@@ -16,6 +17,21 @@ public:
 	~ShaderProgram();
 	GLuint load();
 	void useProgram();
+	GLuint getUniformLocation(const std::string& name);
+	void setUniformF(const std::string& name, float value);
+	void setUniformI(const std::string& name, int value);
+	void setUniformUI(const std::string& name, unsigned int value);
+	void setUniformVec2(const std::string& name, float* addr_p);
+	void setUniformVec2I(const std::string& name, int* addr_p);
+	void setUniformVec2UI(const std::string& name, unsigned int* addr_p);
+	void setUniformVec3(const std::string& name, float* addr_p);
+	void setUniformVec3I(const std::string& name, int* addr_p);
+	void setUniformVec3UI(const std::string& name, unsigned int* addr_p);
+	void setUniformVec4(const std::string& name, float* addr_p);
+	void setUniformVec4I(const std::string& name, int* addr_p);
+	void setUniformVec4UI(const std::string& name, unsigned int* addr_p);
+	void setUniformMat4fv(const std::string& name, float* addr_p);
+
 
 private:
 	GLuint create_shader(GLenum type, const char* source);
@@ -24,6 +40,7 @@ public:
 	ShaderPathMap_t mShaderPaths;
 	ShaderMap_t mShaders;
 	GLuint mHandle;
+	std::map<std::string, GLuint> mUniformLocationCache;
 
 };
 

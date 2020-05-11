@@ -2,6 +2,7 @@
 #include <sstream>
 #include <fstream>
 #include <streambuf>
+#include <iostream>
 
 const size_t ShaderProgram::ERROR_LOG_SZ = 512;
 
@@ -76,3 +77,78 @@ void ShaderProgram::useProgram()
 {
 	glUseProgram(mHandle);
 }
+
+GLuint ShaderProgram::getUniformLocation(const std::string& name)
+{
+	if(mUniformLocationCache.find(name) == mUniformLocationCache.end())
+	{
+		mUniformLocationCache[name] = glGetUniformLocation(mHandle, name.c_str());
+	}
+	return mUniformLocationCache[name];
+}
+
+void ShaderProgram::setUniformF(const std::string& name, float value)
+{
+	glUniform1f(getUniformLocation(name), value);
+}
+
+void ShaderProgram::setUniformI(const std::string& name, int value)
+{
+	glUniform1i(getUniformLocation(name), value);
+}
+
+void ShaderProgram::setUniformUI(const std::string& name, unsigned value)
+{
+	glUniform1ui(getUniformLocation(name), value);
+}
+
+void ShaderProgram::setUniformVec2(const std::string& name, float* addr_p)
+{
+	glUniform2fv(getUniformLocation(name), 2, addr_p);
+}
+
+void ShaderProgram::setUniformVec2I(const std::string& name, int* addr_p)
+{
+	glUniform2iv(getUniformLocation(name), 2, addr_p);
+}
+
+void ShaderProgram::setUniformVec2UI(const std::string& name, unsigned* addr_p)
+{
+	glUniform2uiv(getUniformLocation(name), 2, addr_p);
+}
+
+void ShaderProgram::setUniformVec3(const std::string& name, float* addr_p)
+{
+	glUniform3fv(getUniformLocation(name), 3, addr_p);
+}
+
+void ShaderProgram::setUniformVec3I(const std::string& name, int* addr_p)
+{
+	glUniform3iv(getUniformLocation(name), 3, addr_p);
+}
+
+void ShaderProgram::setUniformVec3UI(const std::string& name, unsigned* addr_p)
+{
+	glUniform3uiv(getUniformLocation(name), 3, addr_p);
+}
+
+void ShaderProgram::setUniformVec4(const std::string& name, float* addr_p)
+{
+	glUniform4fv(getUniformLocation(name), 4, addr_p);
+}
+
+void ShaderProgram::setUniformVec4I(const std::string& name, int* addr_p)
+{
+	glUniform4iv(getUniformLocation(name), 4, addr_p);
+}
+
+void ShaderProgram::setUniformVec4UI(const std::string& name, unsigned* addr_p)
+{
+	glUniform4uiv(getUniformLocation(name), 4, addr_p);
+}
+
+void ShaderProgram::setUniformMat4fv(const std::string& name, float* addr_p)
+{
+	glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, addr_p);
+}
+
