@@ -25,6 +25,9 @@
     <Filter Include="Shaders\postprocess">
       <UniqueIdentifier>{81fb9e95-325c-4ca7-aceb-b63f6a425afe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\particles">
+      <UniqueIdentifier>{78fa237b-c438-4610-b3d5-2bcc136806d0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -111,6 +114,12 @@
     </None>
     <None Include="shaders\postprocess.vert">
       <Filter>Shaders\postprocess</Filter>
+    </None>
+    <None Include="particle.frag">
+      <Filter>Shaders\particles</Filter>
+    </None>
+    <None Include="particle.vert">
+      <Filter>Shaders\particles</Filter>
     </None>
   </ItemGroup>
 </Project>

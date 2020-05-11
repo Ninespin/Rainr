@@ -168,6 +168,8 @@
     <ClInclude Include="vertex_buffer_object.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="particle.frag" />
+    <None Include="particle.vert" />
     <None Include="shaders\compute.glsl" />
     <None Include="shaders\default.frag" />
     <None Include="shaders\default.vert" />

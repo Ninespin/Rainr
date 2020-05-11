@@ -25,10 +25,10 @@
 
 using namespace std::chrono_literals;
 
-enum class RETURN_STATES: int
+enum RETURN_STATES: int
 {
-	ERROR = -1,
-	SUCCESS = 0,
+	RETURN_STATE_ERROR = -1,
+	RETURN_STATE_SUCCESS = 0,
 };
 
 typedef struct
@@ -63,7 +63,7 @@ const bool USE_VSYNC = false;
 const bool USE_SOFT_TIMED_VSYNC = false;
 const bool LOG_DT = true;
 const float CAMERA_SPEED = 5.0f;
-const float CAMERA_MOUSE_SENSITIVITY = 1.25f;
+const float MOUSE_SENSITIVITY = 1.0f;
 
 Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
 	{-QUAD_WT, -QUAD_WT, 0},
@@ -94,11 +94,11 @@ const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shade
 const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 10.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -10.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::mat4 projection = glm::perspective(glm::radians(45.0f), WINDOW_ASPECT, 0.1f, 100.0f);
-glm::vec3 cameraYPR = glm::vec3(0.0f);
+glm::vec3 cameraYPR = glm::vec3(90.0f, 0.0f, 0.0f);
 float DELTA_TIME = 0;
 float LAST_FRAME_TIME = 0;
 
@@ -115,8 +115,8 @@ void mouse_callback(GLFWwindow* window, double x, double y)
 	float dy = lastY - y;
 	lastX = x;
 	lastY = y;
-	cameraYPR.x += dx * CAMERA_MOUSE_SENSITIVITY;
-	cameraYPR.y += dy * CAMERA_MOUSE_SENSITIVITY;
+	cameraYPR.x += dx * MOUSE_SENSITIVITY;
+	cameraYPR.y += dy * MOUSE_SENSITIVITY;
 	if (cameraYPR.y > 89.0f)
 	{
 		cameraYPR.y = 89.0f;
@@ -237,18 +237,18 @@ void run(GLFWwindow* window)
 	GLuint particle_color_buffer;
 	setup_ssbo(particle_color_buffer, Random::random_v4_normalized);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_color_buffer);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
-	glEnableVertexAttribArray(1);
-	glVertexAttribDivisor(1, 1);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
+	glEnableVertexAttribArray(3);
+	glVertexAttribDivisor(3, 1);
 
 	// offsets
 	GLuint particle_offset_buffer;
 	setup_ssbo(particle_offset_buffer, Random::random_v4);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_offset_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_offset_buffer);
-	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
-	glEnableVertexAttribArray(4);
-	glVertexAttribDivisor(4, 1);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
+	glEnableVertexAttribArray(1);
+	glVertexAttribDivisor(1, 1);
 
 
 	// draw indirect buffer
@@ -273,14 +273,14 @@ void run(GLFWwindow* window)
 	///////
 
 	Texture2D colorTexture(WINDOW_WT, WINDOW_HT, GL_LINEAR, GL_LINEAR, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE);
-	RenderBuffer depthBuffer(WINDOW_WT, WINDOW_HT, GL_DEPTH24_STENCIL8);
+	RenderBuffer depthBuffer(WINDOW_WT, WINDOW_HT, GL_DEPTH_COMPONENT32);
 	FrameBuffer frameBuffer;
 	frameBuffer.bind();
 	frameBuffer.attachTexture2D(GL_COLOR_ATTACHMENT0, colorTexture);
-	frameBuffer.attachRenderBuffer(GL_DEPTH_STENCIL_ATTACHMENT, depthBuffer);
+	frameBuffer.attachRenderBuffer(GL_DEPTH_ATTACHMENT, depthBuffer);
 	
 	// FIXME: move that to FrameBuffer
-	GLenum drawbuffers[1] = { GL_COLOR_ATTACHMENT0 };
+	GLenum drawbuffers[] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers(1, drawbuffers);
 	
 	if(!frameBuffer.checkCompleteness())
@@ -293,7 +293,7 @@ void run(GLFWwindow* window)
 
 
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/cube.obj", aiProcess_Triangulate);
+	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/sword.obj", aiProcess_Triangulate);
 	Mesh m = Mesh(*pScene->mMeshes[0]);
 
 
@@ -319,27 +319,26 @@ void run(GLFWwindow* window)
 		viewProj = projection * view;
 
 		// compute shader update particle offsets
-		compute_program.useProgram();
-		glDispatchComputeGroupSizeARB(
-			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
-			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
+		//compute_program.useProgram();
+		//glDispatchComputeGroupSizeARB(
+		//	NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
+		//	WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
+		//glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
 
 		// render offscreen
 		frameBuffer.bind();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
 		shader_program.setUniformMat4fv("uViewProj", glm::value_ptr(viewProj));
-		glBindVertexArray(particle_vao);
-		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
-		//frameBuffer.unbind();
-		
+		//glBindVertexArray(particle_vao);
+		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
 		m.bind();
-		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);//*/
+		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);
 		frameBuffer.unbind();
 
+
 		// render onscreen
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		postProcess_program.useProgram();
 		glBindVertexArray(screen_vao);
 		colorTexture.bind();
@@ -382,12 +381,10 @@ void run(GLFWwindow* window)
 
 int main(int argc, char** argv)
 {
-	int return_status = (int)RETURN_STATES::SUCCESS;
+	int return_status = RETURN_STATE_SUCCESS;
 
 	try
 	{
-		
-
 		glfwInit();
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -403,7 +400,8 @@ int main(int argc, char** argv)
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &max_group_size_z);
 		std::cout << "Maximum compute work group count: " << max_group_size_x
 			<< ", " << max_group_size_y << ", " << max_group_size_z << std::endl;
-		
+
+		glEnable(GL_DEPTH_TEST);
 
 		run(window);
 
@@ -413,7 +411,7 @@ int main(int argc, char** argv)
 	{
 		std::cout << "An error occured: " << e.what() << std::endl;
 		glfwTerminate();
-		return_status = (int)RETURN_STATES::ERROR;
+		return_status = RETURN_STATE_ERROR;
 		std::cin.get();
 	}
 	

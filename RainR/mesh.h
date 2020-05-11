@@ -35,10 +35,12 @@ public:
 	GLuint mVao;
 	VertexBufferObject<aiVector3D>* mVerticesVBO;
 	VertexBufferObject<aiVector3D>* mNormalsVBO;
+	VertexBufferObject<aiColor4D>* mColorsVBO;
 	ElementBufferObject<GLuint>* mEbo;
 	unsigned int mEboSize;
-	GLuint fake[36];
-
+	std::vector<unsigned int> mIndicesData;
+protected:
+	static aiColor4D DEFAULT_MESH_COLOR;
 
 };
 

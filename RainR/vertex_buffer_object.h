@@ -6,7 +6,7 @@ class VertexBufferObject
 {
 public:
 	VertexBufferObject(unsigned int bufferType, unsigned int drawType, unsigned int glDataType, size_t dataSegmentation, size_t dataCount, T* data,
-		bool normalized, unsigned int attribLocation);
+		bool normalized, unsigned int attribLocation, unsigned int attribDivision = 0);
 	~VertexBufferObject();
 	void bind() const;
 	void unbind() const;
@@ -23,12 +23,13 @@ protected:
 	GLenum mDrawType;
 	GLuint mHandle;
 	GLuint mDataSegmentation; // number of mGLDataTypes per T
+	GLuint mAttribDivision;
 
 };
 
 template <typename T>
 VertexBufferObject<T>::VertexBufferObject(unsigned int bufferType, unsigned int drawType, unsigned int glDataType, size_t dataSegmentation, size_t dataCount, T* data,
-	bool normalized, unsigned int attribLocation)
+	bool normalized, unsigned int attribLocation, unsigned int attribDivision)
 	: mBufferType(bufferType)
 	, mDataCount(dataCount)
 	, mDataPointer(data)
@@ -38,12 +39,14 @@ VertexBufferObject<T>::VertexBufferObject(unsigned int bufferType, unsigned int 
 	, mDrawType(drawType)
 	, mHandle(0)
 	, mDataSegmentation(dataSegmentation)
+	, mAttribDivision(attribDivision)
 {
 	glGenBuffers(1, &mHandle);
 	bind();
 	glBufferData(mBufferType, mDataCount * sizeof(T),
 		mDataPointer, mDrawType);
 	glVertexAttribPointer(mAttribBindPoint, mDataSegmentation, mGLDataType, mNormalized, sizeof(T), nullptr);
+	glVertexAttribDivisor(mAttribBindPoint, mAttribDivision);
 	enable();
 
 }
