@@ -65,3 +65,9 @@ void Mesh::bind()
 {
 	glBindVertexArray(mVao);
 }
+
+void Mesh::draw()
+{
+	bind();
+	glDrawElements(GL_TRIANGLES, mEboSize, GL_UNSIGNED_INT, nullptr);
+}

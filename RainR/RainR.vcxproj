@@ -142,9 +142,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="camera.cpp" />
     <ClCompile Include="depth_texture_2d.cpp" />
     <ClCompile Include="frame_buffer.cpp" />
     <ClCompile Include="mesh.cpp" />
+    <ClCompile Include="mesh_indirect.cpp" />
     <ClCompile Include="random.cpp" />
     <ClCompile Include="render_buffer.cpp" />
     <ClCompile Include="shader_program.cpp" />
@@ -153,12 +155,14 @@
     <ClCompile Include="timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera.h" />
     <ClInclude Include="depth_texture_2d.h" />
     <ClInclude Include="element_buffer_object.h" />
     <ClInclude Include="frame_buffer.h" />
     <ClInclude Include="i_frame_buffer.h" />
     <ClInclude Include="i_texture.h" />
     <ClInclude Include="mesh.h" />
+    <ClInclude Include="mesh_indirect.h" />
     <ClInclude Include="random.h" />
     <ClInclude Include="render_buffer.h" />
     <ClInclude Include="shader_program.h" />

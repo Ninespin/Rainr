@@ -22,6 +22,8 @@
 #include "vertex_buffer_object.h"
 #include "mesh.h"
 #include "element_buffer_object.h"
+#include "mesh_indirect.h"
+#include "camera.h"
 
 using namespace std::chrono_literals;
 
@@ -62,7 +64,10 @@ const unsigned int NB_WORKGROUPS_Y = 1;
 const bool USE_VSYNC = false;
 const bool USE_SOFT_TIMED_VSYNC = false;
 const bool LOG_DT = true;
-const float CAMERA_SPEED = 5.0f;
+const float CAMERA_SPEED_DEFAULT = 10.0f;
+const float CAMERA_SPEED_FAST = 100.0f;
+const float CAMERA_SPEED_SLOW = 1.0f;
+float CAMERA_SPEED = 5.0f;
 const float MOUSE_SENSITIVITY = 1.0f;
 
 Vec3 PARTICLE_QUAD_VERTEX_DATA[] = {
@@ -94,13 +99,10 @@ const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shade
 const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -10.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::mat4 projection = glm::perspective(glm::radians(45.0f), WINDOW_ASPECT, 0.1f, 100.0f);
-glm::vec3 cameraYPR = glm::vec3(90.0f, 0.0f, 0.0f);
 float DELTA_TIME = 0;
 float LAST_FRAME_TIME = 0;
+std::map<int, bool> key_states;
+Camera camera = Camera(glm::radians(45.0f), WINDOW_ASPECT, 0.1f, 1000.0f);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -111,25 +113,58 @@ void mouse_callback(GLFWwindow* window, double x, double y)
 {
 	static float lastX = x;
 	static float lastY = y;
-	float dx = x - lastX;
-	float dy = lastY - y;
+	float dx = (x - lastX) * MOUSE_SENSITIVITY;
+	float dy = (lastY - y) * MOUSE_SENSITIVITY;
 	lastX = x;
 	lastY = y;
-	cameraYPR.x += dx * MOUSE_SENSITIVITY;
-	cameraYPR.y += dy * MOUSE_SENSITIVITY;
-	if (cameraYPR.y > 89.0f)
+	camera.rotate(dx, dy, 0);
+}
+
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod)
+{
+	if(action == GLFW_PRESS)
 	{
-		cameraYPR.y = 89.0f;
+		key_states[key] = true;
 	}
-	else if (cameraYPR.y < -89.0f)
+	else if(action == GLFW_RELEASE)
 	{
-		cameraYPR.y = -89.0f;
+		key_states[key] = false;
+	}
+}
+
+void process_input(GLFWwindow* window)
+{
+	// program termination
+	if (key_states[GLFW_KEY_ESCAPE])
+	{
+		glfwSetWindowShouldClose(window, true);
+		return;
 	}
 
-	cameraFront.x = cos(glm::radians(cameraYPR.x)) * cos(glm::radians(cameraYPR.y));
-	cameraFront.y = sin(glm::radians(cameraYPR.y));
-	cameraFront.z = sin(glm::radians(cameraYPR.x)) * cos(glm::radians(cameraYPR.y));
-	cameraFront = glm::normalize(cameraFront);
+	// camera translation
+	float cameraSpeed = CAMERA_SPEED_DEFAULT;
+
+	if (key_states[GLFW_KEY_LEFT_SHIFT])
+		cameraSpeed = CAMERA_SPEED_FAST;
+	if (key_states[GLFW_KEY_LEFT_CONTROL])
+		cameraSpeed = CAMERA_SPEED_SLOW;
+
+	cameraSpeed *= DELTA_TIME;
+
+	if (key_states[GLFW_KEY_W])
+		camera.translate(cameraSpeed * camera.mForward);
+	if (key_states[GLFW_KEY_S])
+		camera.translate(-cameraSpeed * camera.mForward);
+	if (key_states[GLFW_KEY_A])
+		camera.translate(-glm::normalize(glm::cross(camera.mForward, camera.mUp)) * cameraSpeed);
+	if (key_states[GLFW_KEY_D])
+		camera.translate(glm::normalize(glm::cross(camera.mForward, camera.mUp)) * cameraSpeed);
+	if (key_states[GLFW_KEY_Q])
+		camera.translate(-cameraSpeed * camera.mUp);
+	if (key_states[GLFW_KEY_E])
+		camera.translate(cameraSpeed * camera.mUp);
+
 }
 
 GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int ht = WINDOW_HT)
@@ -147,33 +182,11 @@ GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int 
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+	glfwSetKeyCallback(window, key_callback);
 	return window;
 }
 
-void process_input(GLFWwindow* window)
-{
-	// program termination
-	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-	{
-		glfwSetWindowShouldClose(window, true);
-		return;
-	}
-
-	// camera translation
-	const float cameraSpeed = CAMERA_SPEED * DELTA_TIME;
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		cameraPos += cameraSpeed * cameraFront;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		cameraPos -= cameraSpeed * cameraFront;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		cameraPos -= cameraUp * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		cameraPos += cameraUp * cameraSpeed;
-}
 
 // FIXME: move away
 void setup_ssbo(GLuint& ssbo, Vec4 (*rand_fn)())
@@ -290,14 +303,12 @@ void run(GLFWwindow* window)
 	}
 
 	///////
-
+	camera.setTranslation(0, 10, 100);
+	camera.setYPR(-90.0f, 0, 0);
 
 	Assimp::Importer importer;
 	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/sword.obj", aiProcess_Triangulate);
-	Mesh m = Mesh(*pScene->mMeshes[0]);
-
-
-	glm::mat4 viewProj;
+	MeshIndirect m = MeshIndirect(*pScene->mMeshes[0], 1);
 
 	Timer timer;
 	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
@@ -315,8 +326,6 @@ void run(GLFWwindow* window)
 		process_input(window);
 
 		// update
-		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-		viewProj = projection * view;
 
 		// compute shader update particle offsets
 		//compute_program.useProgram();
@@ -329,11 +338,10 @@ void run(GLFWwindow* window)
 		frameBuffer.bind();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
-		shader_program.setUniformMat4fv("uViewProj", glm::value_ptr(viewProj));
+		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
 		//glBindVertexArray(particle_vao);
 		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
-		m.bind();
-		glDrawElements(GL_TRIANGLES, m.mEboSize, GL_UNSIGNED_INT, nullptr);
+		m.draw();
 		frameBuffer.unbind();
 
 

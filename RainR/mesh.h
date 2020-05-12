@@ -27,9 +27,9 @@ public:
 	};
 public:
 	Mesh(aiMesh& mesh);
-	~Mesh();
-	void bind();
-
+	virtual ~Mesh();
+	virtual void bind();
+	virtual void draw();
 public:
 	aiMesh* mMesh;
 	GLuint mVao;
