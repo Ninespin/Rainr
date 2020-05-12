@@ -220,9 +220,6 @@ void run(GLFWwindow* window)
 	shader_program.mShaderPaths[GL_FRAGMENT_SHADER] = FRAGMENT_SHADER_PATH;
 	shader_program.load();
 	shader_program.useProgram();
-
-	// camera
-	glm::mat4 view;
 	
 	// load compute shader program
 	ShaderProgram compute_program;
@@ -246,7 +243,6 @@ void run(GLFWwindow* window)
 	VertexBufferObject<Vec3> particleVerticeVBO = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(PARTICLE_QUAD_VERTEX_DATA), PARTICLE_QUAD_VERTEX_DATA, false, 0);
 
 	// colors
-	//VertexBufferObject<Vec4> particleColorVBO = VertexBufferObject<Vec4>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, , PARTICLE_QUAD_VERTEX_DATA, false, 0);
 	GLuint particle_color_buffer;
 	setup_ssbo(particle_color_buffer, Random::random_v4_normalized);
 	glBindBuffer(GL_ARRAY_BUFFER, particle_color_buffer);
@@ -307,11 +303,13 @@ void run(GLFWwindow* window)
 	camera.setYPR(-90.0f, 0, 0);
 
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/sword.obj", aiProcess_Triangulate);
+	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/bust.stl", aiProcess_Triangulate);
 	MeshIndirect m = MeshIndirect(*pScene->mMeshes[0], 1);
 
 	Timer timer;
 	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
+
+	glm::vec3 sun;
 
 	// main loop
 	while(!glfwWindowShouldClose(window))
@@ -339,6 +337,10 @@ void run(GLFWwindow* window)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
 		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
+		const float time = static_cast<float>(glfwGetTime());
+		sun = glm::rotate(glm::mat4(1), time, glm::vec3(0, 0, 1)) * glm::vec4(0, 10000, 0, 1) ;
+		std::cout << sun.x << " " << sun.y << " " << sun.z << std::endl;
+		shader_program.setUniformVec3("uSunPos", glm::value_ptr(sun));
 		//glBindVertexArray(particle_vao);
 		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
 		m.draw();
@@ -365,7 +367,7 @@ void run(GLFWwindow* window)
 		if (LOG_DT)
 		{
 			// log every 2s.
-			if (time(nullptr) % 2 == 0) {
+			if (::time(nullptr) % 2 == 0) {
 				if (unique_dt_log) {
 					std::cout << "FPS: " << 1000000000 / elapsed_ns << " ( " << elapsed_ns << "ns )" << std::endl;
 				}
