@@ -161,9 +161,9 @@ void process_input(GLFWwindow* window)
 	if (key_states[GLFW_KEY_D])
 		camera.translate(glm::normalize(glm::cross(camera.mForward, camera.mUp)) * cameraSpeed);
 	if (key_states[GLFW_KEY_Q])
-		camera.translate(-cameraSpeed * camera.mUp);
+		camera.translate(-cameraSpeed * camera.mUp); // FIXME: up not working properly when looking up
 	if (key_states[GLFW_KEY_E])
-		camera.translate(cameraSpeed * camera.mUp);
+		camera.translate(cameraSpeed * camera.mUp); // FIXME: down not working properly when looking up
 
 }
 
@@ -179,6 +179,8 @@ GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int 
 		glfwSwapInterval(0);
 	}
 	glViewport(0, 0, wt, ht);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
@@ -233,7 +235,7 @@ void run(GLFWwindow* window)
 	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.frag";
 	postProcess_program.load();
 	postProcess_program.useProgram();
-	postProcess_program.setUniformI("screenTexture", 0);
+	postProcess_program.setUniformI("uScreenTexture", 0);
 
 	// load particle vertex data
 	GLuint particle_vao;
@@ -282,6 +284,10 @@ void run(GLFWwindow* window)
 	///////
 
 	Texture2D colorTexture(WINDOW_WT, WINDOW_HT, GL_LINEAR, GL_LINEAR, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE);
+	GLuint64 colorTexBindHandle = glGetTextureHandleARB(colorTexture.mHandle);
+	glMakeTextureHandleResidentARB(colorTexBindHandle);
+	GLuint samplerHandle = postProcess_program.getUniformLocation("uScreenTexture");
+	glUniformHandleui64ARB(samplerHandle, colorTexBindHandle);
 	RenderBuffer depthBuffer(WINDOW_WT, WINDOW_HT, GL_DEPTH_COMPONENT32);
 	FrameBuffer frameBuffer;
 	frameBuffer.bind();
@@ -303,8 +309,8 @@ void run(GLFWwindow* window)
 	camera.setYPR(-90.0f, 0, 0);
 
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/bust.stl", aiProcess_Triangulate);
-	MeshIndirect m = MeshIndirect(*pScene->mMeshes[0], 1);
+	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/bust.stl", aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+	MeshIndirect m = MeshIndirect(*pScene->mMeshes[0], 100);
 
 	Timer timer;
 	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
@@ -316,14 +322,16 @@ void run(GLFWwindow* window)
 	{
 		static bool unique_dt_log = true;
 		timer.restart();
-		float currentFrameTime = glfwGetTime();
-		DELTA_TIME = currentFrameTime - LAST_FRAME_TIME;
-		LAST_FRAME_TIME = currentFrameTime;
+		float currentTime = glfwGetTime();
+		DELTA_TIME = currentTime - LAST_FRAME_TIME;
+		LAST_FRAME_TIME = currentTime;
+
 		
 		// process input
 		process_input(window);
 
 		// update
+		sun = glm::normalize(glm::rotate(glm::mat4(1), currentTime, glm::vec3(0, 0, 1)) * glm::vec4(0, 10000, 0, 1));
 
 		// compute shader update particle offsets
 		//compute_program.useProgram();
@@ -337,9 +345,6 @@ void run(GLFWwindow* window)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
 		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
-		const float time = static_cast<float>(glfwGetTime());
-		sun = glm::rotate(glm::mat4(1), time, glm::vec3(0, 0, 1)) * glm::vec4(0, 10000, 0, 1) ;
-		std::cout << sun.x << " " << sun.y << " " << sun.z << std::endl;
 		shader_program.setUniformVec3("uSunPos", glm::value_ptr(sun));
 		//glBindVertexArray(particle_vao);
 		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
@@ -348,10 +353,10 @@ void run(GLFWwindow* window)
 
 
 		// render onscreen
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 		postProcess_program.useProgram();
 		glBindVertexArray(screen_vao);
-		colorTexture.bind();
+		//colorTexture.bind();
 		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 		
 

@@ -26,16 +26,17 @@ Mesh::Mesh(aiMesh& mesh)
 
 	if(!mesh.HasVertexColors(0))
 	{
-		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, 1, &DEFAULT_MESH_COLOR, false, ATTRIB_COLOR, 1);
+		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, 1, &DEFAULT_MESH_COLOR, true, ATTRIB_COLOR, 1);
 	}
 	else
 	{
-		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, mesh.mNumVertices, mesh.mColors[0], false, ATTRIB_COLOR);
+		std::cout << "actually has color!" << std::endl;
+		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, mesh.mNumVertices, mesh.mColors[0], true, ATTRIB_COLOR);
 	}
 
 	if(mesh.HasNormals())
 	{
-		mNormalsVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh.mNumVertices, mesh.mNormals, false, ATTRIB_NORMALS);
+		mNormalsVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh.mNumVertices, mesh.mNormals, true, ATTRIB_NORMALS);
 	}
 
 	if(mesh.HasFaces())
