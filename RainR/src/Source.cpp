@@ -1,6 +1,5 @@
 
 #include <iostream>
-#include <sstream>
 #include <chrono>
 #include <thread>
 #include <GL/glew.h>
@@ -8,22 +7,26 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#include "timer.h"
-#include "shader_program.h"
-#include "vectors.h"
-#include "random.h"
-#include "frame_buffer.h"
-#include "render_buffer.h"
-#include "texture2d.h"
-#include "vertex_buffer_object.h"
-#include "mesh.h"
-#include "element_buffer_object.h"
-#include "mesh_indirect.h"
-#include "camera.h"
+
+#include "buffer/frame_buffer.h"
+#include "buffer/vertex_buffer_object.h"
+#include "buffer/element_buffer_object.h"
+#include "camera/camera.h"
+#include "mesh/mesh.h"
+#include "mesh/mesh_register.h"
+#include "shader_program/shader_program.h"
+#include "texture/render_buffer.h"
+#include "texture/texture2d.h"
+#include "util/random.h"
+#include "util/timer.h"
+#include "util/vectors.h"
+#include "buffer/vertex_array_buffer.h"
+#include "buffer/shader_storage_buffer.h"
+
 
 using namespace std::chrono_literals;
 
@@ -95,8 +98,8 @@ unsigned int STANDARD_QUAD_ELEMENT_DATA[] = {
 };
 
 
-const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.vert";
-const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default.frag";
+const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default/default.vert";
+const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default/default.frag";
 const char* COMPUTE_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/compute.glsl";
 
 float DELTA_TIME = 0;
@@ -119,7 +122,6 @@ void mouse_callback(GLFWwindow* window, double x, double y)
 	lastY = y;
 	camera.rotate(dx, dy, 0);
 }
-
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
@@ -191,16 +193,9 @@ GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int 
 
 
 // FIXME: move away
-void setup_ssbo(GLuint& ssbo, Vec4 (*rand_fn)())
+void setup_ssbo(ShaderStorageBuffer<Vec4>& ssbo, Vec4 (*rand_fn)())
 {
-	glGenBuffers(1, &ssbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, NB_PARTICLES * sizeof(Vec4), nullptr, GL_STATIC_DRAW);
-	const GLint buff_mask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-	Vec4* const points = (Vec4*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER
-		, 0
-		, NB_PARTICLES * sizeof(Vec4)
-		, buff_mask);
+	Vec4* const points = ssbo.map();
 
 	// generate random pos.
 	for (unsigned int i = 0; i < NB_PARTICLES; i++)
@@ -209,9 +204,31 @@ void setup_ssbo(GLuint& ssbo, Vec4 (*rand_fn)())
 		points[i].w = 1;
 	}
 
-	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	ssbo.unmap();
 }
 
+
+
+void draw(aiNode& node, ShaderProgram& program, const aiMatrix4x4 parentMatrix = aiMatrix4x4())
+{
+	const aiMatrix4x4 temp = parentMatrix * node.mTransformation;
+	aiMatrix4x4 currentMatrix = temp;
+	currentMatrix.Transpose();
+	
+	program.setUniformMat4fv("uModelMat", &currentMatrix.a1);
+
+	for(unsigned int i = 0; i < node.mNumMeshes; i++)
+	{
+		MeshRegister::instance()->getMeshByIndex(node.mMeshes[i])->draw();
+	}
+
+
+	for(unsigned int i = 0; i < node.mNumChildren; i++)
+	{
+		draw(*node.mChildren[i], program, temp);
+	}
+
+}
 
 void run(GLFWwindow* window)
 {
@@ -231,35 +248,33 @@ void run(GLFWwindow* window)
 
 	// load post-processing shader program
 	ShaderProgram postProcess_program;
-	postProcess_program.mShaderPaths[GL_VERTEX_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.vert";
-	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess.frag";
+	postProcess_program.mShaderPaths[GL_VERTEX_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess/postprocess.vert";
+	postProcess_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/postprocess/postprocess.frag";
 	postProcess_program.load();
 	postProcess_program.useProgram();
-	postProcess_program.setUniformI("uScreenTexture", 0);
+	postProcess_program.setUniformUI("uScreenTexture", 0);
+
+	// load particle shader program
+	ShaderProgram particle_program;
+	particle_program.mShaderPaths[GL_VERTEX_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/particle/particle.vert";
+	particle_program.mShaderPaths[GL_FRAGMENT_SHADER] = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/particle/particle.frag";
+	particle_program.load();
+	particle_program.useProgram();
 
 	// load particle vertex data
-	GLuint particle_vao;
-	glGenVertexArrays(1, &particle_vao);
-	glBindVertexArray(particle_vao);
+	VertexArrayBuffer particleVao;
 	ElementBufferObject<GLuint> particleEbo = ElementBufferObject<GLuint>(GL_STATIC_DRAW, 4, STANDARD_QUAD_ELEMENT_DATA);
-	VertexBufferObject<Vec3> particleVerticeVBO = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(PARTICLE_QUAD_VERTEX_DATA), PARTICLE_QUAD_VERTEX_DATA, false, 0);
+	VertexBufferObject<Vec3> particleVerticeVbo = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(PARTICLE_QUAD_VERTEX_DATA), PARTICLE_QUAD_VERTEX_DATA, false, 0);
 
 	// colors
-	GLuint particle_color_buffer;
-	setup_ssbo(particle_color_buffer, Random::random_v4_normalized);
-	glBindBuffer(GL_ARRAY_BUFFER, particle_color_buffer);
-	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
-	glEnableVertexAttribArray(3);
-	glVertexAttribDivisor(3, 1);
+	ShaderStorageBuffer<Vec4> particleColorSsbo = ShaderStorageBuffer<Vec4>(NB_PARTICLES, nullptr, GL_STATIC_DRAW, 0);
+	setup_ssbo(particleColorSsbo, Random::random_v4_normalized);
+	particleColorSsbo.bindAsVBO(3, 4, GL_FLOAT, false, 1);
 
 	// offsets
-	GLuint particle_offset_buffer;
-	setup_ssbo(particle_offset_buffer, Random::random_v4);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_offset_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, particle_offset_buffer);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vec4), nullptr);
-	glEnableVertexAttribArray(1);
-	glVertexAttribDivisor(1, 1);
+	ShaderStorageBuffer<Vec4> particleOffsetSsbo = ShaderStorageBuffer<Vec4>(NB_PARTICLES, nullptr, GL_STATIC_DRAW, 0);
+	setup_ssbo(particleOffsetSsbo, Random::random_v4);
+	particleOffsetSsbo.bindAsVBO(1, 4, GL_FLOAT, false, 1);
 
 
 	// draw indirect buffer
@@ -271,11 +286,7 @@ void run(GLFWwindow* window)
 
 
 	// screen quad
-
-	// load particle vertex data
-	GLuint screen_vao;
-	glGenVertexArrays(1, &screen_vao);
-	glBindVertexArray(screen_vao);
+	VertexArrayBuffer screenVAO;
 	ElementBufferObject<GLuint> screenEbo = ElementBufferObject<GLuint>(GL_STATIC_DRAW, 4, STANDARD_QUAD_ELEMENT_DATA);
 	VertexBufferObject<Vec3> screenVerticesVBO = VertexBufferObject<Vec3>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, sizeof(SCREEN_QUAD_VERTEX_DATA), SCREEN_QUAD_VERTEX_DATA, false, 0);
 	VertexBufferObject<Vec2> screenUVVBO = VertexBufferObject<Vec2>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 2, sizeof(SCREEN_QUAD_UV_DATA), SCREEN_QUAD_UV_DATA, false, 1);
@@ -284,10 +295,6 @@ void run(GLFWwindow* window)
 	///////
 
 	Texture2D colorTexture(WINDOW_WT, WINDOW_HT, GL_LINEAR, GL_LINEAR, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE);
-	GLuint64 colorTexBindHandle = glGetTextureHandleARB(colorTexture.mHandle);
-	glMakeTextureHandleResidentARB(colorTexBindHandle);
-	GLuint samplerHandle = postProcess_program.getUniformLocation("uScreenTexture");
-	glUniformHandleui64ARB(samplerHandle, colorTexBindHandle);
 	RenderBuffer depthBuffer(WINDOW_WT, WINDOW_HT, GL_DEPTH_COMPONENT32);
 	FrameBuffer frameBuffer;
 	frameBuffer.bind();
@@ -308,9 +315,15 @@ void run(GLFWwindow* window)
 	camera.setTranslation(0, 10, 100);
 	camera.setYPR(-90.0f, 0, 0);
 
+	// Load scene
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/bust.stl", aiProcess_Triangulate | aiProcess_GenSmoothNormals);
-	MeshIndirect m = MeshIndirect(*pScene->mMeshes[0], 100);
+	const aiScene* pScene = importer.ReadFile("C:/Users/jeremi/source/repos/RainR/Debug/car.fbx", aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+	MeshRegister* meshRegister = MeshRegister::instance();
+	for(unsigned int i = 0; i < pScene->mNumMeshes; i++)
+	{
+		meshRegister->registerMesh(pScene->mMeshes[i], i);
+	}
+
 
 	Timer timer;
 	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
@@ -331,14 +344,18 @@ void run(GLFWwindow* window)
 		process_input(window);
 
 		// update
-		sun = glm::normalize(glm::rotate(glm::mat4(1), currentTime, glm::vec3(0, 0, 1)) * glm::vec4(0, 10000, 0, 1));
+		sun = {
+			-100,
+			-100,
+			100
+		};
 
 		// compute shader update particle offsets
-		//compute_program.useProgram();
-		//glDispatchComputeGroupSizeARB(
-		//	NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
-		//	WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
-		//glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context?
+		compute_program.useProgram();
+		glDispatchComputeGroupSizeARB(
+			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
+			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context? //*/
 
 		// render offscreen
 		frameBuffer.bind();
@@ -346,17 +363,19 @@ void run(GLFWwindow* window)
 		shader_program.useProgram();
 		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
 		shader_program.setUniformVec3("uSunPos", glm::value_ptr(sun));
-		//glBindVertexArray(particle_vao);
-		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);
-		m.draw();
+		draw(*pScene->mRootNode, shader_program);
+
+		particle_program.useProgram();
+		particle_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
+		particleVao.bind();
+		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);//*/
 		frameBuffer.unbind();
 
 
 		// render onscreen
 		glClear(GL_DEPTH_BUFFER_BIT);
 		postProcess_program.useProgram();
-		glBindVertexArray(screen_vao);
-		//colorTexture.bind();
+		screenVAO.bind();
 		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, nullptr);
 		
 

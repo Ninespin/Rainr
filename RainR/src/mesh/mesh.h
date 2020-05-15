@@ -2,8 +2,9 @@
 #include <GL/glew.h>
 #include <assimp/mesh.h>
 #include <vector>
-#include "vertex_buffer_object.h"
-#include "element_buffer_object.h"
+#include "buffer/vertex_buffer_object.h"
+#include "buffer/element_buffer_object.h"
+#include "buffer/vertex_array_buffer.h"
 
 class Mesh
 {
@@ -26,13 +27,13 @@ public:
 		ATTRIB_MULTI_TEX_COORD_7,
 	};
 public:
-	Mesh(aiMesh& mesh);
+	Mesh(const aiMesh* mesh);
 	virtual ~Mesh();
 	virtual void bind();
 	virtual void draw();
 public:
-	aiMesh* mMesh;
-	GLuint mVao;
+	const aiMesh* mMesh;
+	VertexArrayBuffer* mVao;
 	VertexBufferObject<aiVector3D>* mVerticesVBO;
 	VertexBufferObject<aiVector3D>* mNormalsVBO;
 	VertexBufferObject<aiColor4D>* mColorsVBO;

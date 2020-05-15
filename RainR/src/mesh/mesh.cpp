@@ -1,16 +1,15 @@
 #include "mesh.h"
-#include "vertex_buffer_object.h"
-#include "element_buffer_object.h"
+#include "buffer/vertex_buffer_object.h"
+#include "buffer/element_buffer_object.h"
 #include <assimp/material.h>
 #include <iostream>
 
-// TODO: ALLOCATOR
 
 aiColor4D Mesh::DEFAULT_MESH_COLOR = aiColor4D(1, 1, 1, 1);
 
-Mesh::Mesh(aiMesh& mesh)
-	:mMesh(&mesh)
-	, mVao(0)
+Mesh::Mesh(const aiMesh* mesh)
+	:mMesh(mesh)
+	, mVao(nullptr)
 	, mVerticesVBO(nullptr)
 	, mNormalsVBO(nullptr)
 	, mColorsVBO(nullptr)
@@ -18,28 +17,24 @@ Mesh::Mesh(aiMesh& mesh)
 	, mEboSize(0)
 	, mIndicesData()
 {
-	glGenVertexArrays(1, &mVao);
-	glBindVertexArray(mVao);
+	mVao = new VertexArrayBuffer();
+	mVerticesVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh->mNumVertices, mesh->mVertices, false, ATTRIB_VERTEX);
 
-	mVerticesVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh.mNumVertices, mesh.mVertices, false, ATTRIB_VERTEX);
-
-
-	if(!mesh.HasVertexColors(0))
+	if(!mesh->HasVertexColors(0))
 	{
 		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, 1, &DEFAULT_MESH_COLOR, true, ATTRIB_COLOR, 1);
 	}
 	else
 	{
-		std::cout << "actually has color!" << std::endl;
-		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, mesh.mNumVertices, mesh.mColors[0], true, ATTRIB_COLOR);
+		mColorsVBO = new VertexBufferObject<aiColor4D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 4, mesh->mNumVertices, mesh->mColors[0], true, ATTRIB_COLOR);
 	}
 
-	if(mesh.HasNormals())
+	if(mesh->HasNormals())
 	{
-		mNormalsVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh.mNumVertices, mesh.mNormals, true, ATTRIB_NORMALS);
+		mNormalsVBO = new VertexBufferObject<aiVector3D>(GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, 3, mesh->mNumVertices, mesh->mNormals, true, ATTRIB_NORMALS);
 	}
 
-	if(mesh.HasFaces())
+	if(mesh->HasFaces())
 	{
 		for (unsigned int i = 0; i < mMesh->mNumFaces; i++)
 		{
@@ -53,18 +48,18 @@ Mesh::Mesh(aiMesh& mesh)
 	}
 }
 
-
 Mesh::~Mesh()
 {
 	delete mVerticesVBO;
 	delete mNormalsVBO;
 	delete mColorsVBO;
 	delete mEbo;
+	delete mVao;
 }
 
 void Mesh::bind()
 {
-	glBindVertexArray(mVao);
+	mVao->bind();
 }
 
 void Mesh::draw()

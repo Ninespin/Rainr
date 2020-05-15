@@ -1,6 +1,6 @@
 #include "mesh_indirect.h"
 
-MeshIndirect::MeshIndirect(aiMesh& mesh, unsigned numInstances)
+MeshIndirect::MeshIndirect(const aiMesh* mesh, unsigned numInstances)
 	: Mesh(mesh)
 	, mCommand()
 {

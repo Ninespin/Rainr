@@ -18,6 +18,51 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\buffer\frame_buffer.cpp" />
+    <ClCompile Include="src\buffer\shader_storage_buffer.cpp" />
+    <ClCompile Include="src\buffer\vertex_array_buffer.cpp" />
+    <ClCompile Include="src\camera\camera.cpp" />
+    <ClCompile Include="src\mesh\mesh.cpp" />
+    <ClCompile Include="src\mesh\mesh_indirect.cpp" />
+    <ClCompile Include="src\mesh\mesh_register.cpp" />
+    <ClCompile Include="src\shader_program\shader_program.cpp" />
+    <ClCompile Include="src\Source.cpp" />
+    <ClCompile Include="src\texture\depth_texture_2d.cpp" />
+    <ClCompile Include="src\texture\render_buffer.cpp" />
+    <ClCompile Include="src\texture\texture2d.cpp" />
+    <ClCompile Include="src\util\random.cpp" />
+    <ClCompile Include="src\util\timer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\buffer\element_buffer_object.h" />
+    <ClInclude Include="src\buffer\frame_buffer.h" />
+    <ClInclude Include="src\buffer\i_frame_buffer.h" />
+    <ClInclude Include="src\buffer\shader_storage_buffer.h" />
+    <ClInclude Include="src\buffer\vertex_array_buffer.h" />
+    <ClInclude Include="src\buffer\vertex_buffer_object.h" />
+    <ClInclude Include="src\camera\camera.h" />
+    <ClInclude Include="src\mesh\mesh.h" />
+    <ClInclude Include="src\mesh\mesh_indirect.h" />
+    <ClInclude Include="src\mesh\mesh_register.h" />
+    <ClInclude Include="src\shader_program\shader_program.h" />
+    <ClInclude Include="src\texture\depth_texture_2d.h" />
+    <ClInclude Include="src\texture\i_texture.h" />
+    <ClInclude Include="src\texture\render_buffer.h" />
+    <ClInclude Include="src\texture\texture2d.h" />
+    <ClInclude Include="src\util\random.h" />
+    <ClInclude Include="src\util\timer.h" />
+    <ClInclude Include="src\util\vectors.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\compute.glsl" />
+    <None Include="shaders\default\default.frag" />
+    <None Include="shaders\default\default.vert" />
+    <None Include="shaders\particle\particle.frag" />
+    <None Include="shaders\particle\particle.vert" />
+    <None Include="shaders\postprocess\postprocess.frag" />
+    <None Include="shaders\postprocess\postprocess.vert" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{B8288F94-FB1D-4934-897D-E64E444FD46C}</ProjectGuid>
@@ -87,7 +132,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\include;$(ProjectDir)\externals\assimp\include;$(ProjectDir)\externals\glm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\include;$(ProjectDir)\externals\assimp\include;$(ProjectDir)\externals\glm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ProjectDir)\externals\glew\lib\Release\Win32;$(ProjectDir)\externals\glfw\bin;$(ProjectDir)\externals\assimp\lib;$(ProjectDir)\externals\glm\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -115,7 +160,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\include;$(ProjectDir)\externals\assimp\include;$(ProjectDir)\externals\glm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\src;$(ProjectDir)\externals\glew\include;$(ProjectDir)\externals\glfw\include;$(ProjectDir)\externals\assimp\include;$(ProjectDir)\externals\glm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -141,45 +186,6 @@
       <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="camera.cpp" />
-    <ClCompile Include="depth_texture_2d.cpp" />
-    <ClCompile Include="frame_buffer.cpp" />
-    <ClCompile Include="mesh.cpp" />
-    <ClCompile Include="mesh_indirect.cpp" />
-    <ClCompile Include="random.cpp" />
-    <ClCompile Include="render_buffer.cpp" />
-    <ClCompile Include="shader_program.cpp" />
-    <ClCompile Include="Source.cpp" />
-    <ClCompile Include="texture2d.cpp" />
-    <ClCompile Include="timer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="depth_texture_2d.h" />
-    <ClInclude Include="element_buffer_object.h" />
-    <ClInclude Include="frame_buffer.h" />
-    <ClInclude Include="i_frame_buffer.h" />
-    <ClInclude Include="i_texture.h" />
-    <ClInclude Include="mesh.h" />
-    <ClInclude Include="mesh_indirect.h" />
-    <ClInclude Include="random.h" />
-    <ClInclude Include="render_buffer.h" />
-    <ClInclude Include="shader_program.h" />
-    <ClInclude Include="texture2d.h" />
-    <ClInclude Include="timer.h" />
-    <ClInclude Include="vectors.h" />
-    <ClInclude Include="vertex_buffer_object.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="particle.frag" />
-    <None Include="particle.vert" />
-    <None Include="shaders\compute.glsl" />
-    <None Include="shaders\default.frag" />
-    <None Include="shaders\default.vert" />
-    <None Include="shaders\postprocess.frag" />
-    <None Include="shaders\postprocess.vert" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

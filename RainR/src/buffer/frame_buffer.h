@@ -1,9 +1,9 @@
 #pragma once
 
 #include "i_frame_buffer.h"
+#include "texture/render_buffer.h"
+#include "texture/texture2d.h"
 #include <map>
-#include "texture2d.h"
-#include "render_buffer.h"
 
 class FrameBuffer: public FrameBufferBase
 {

@@ -5,133 +5,162 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{22d069ac-b6e7-4f63-89e2-d7ac209b16bc}</UniqueIdentifier>
+    <Filter Include="util">
+      <UniqueIdentifier>{7567b92f-c264-4316-ad78-86c02fbecb0c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\default">
-      <UniqueIdentifier>{8e7daa8b-851e-4ad5-bd97-45ee2072e827}</UniqueIdentifier>
+    <Filter Include="mesh">
+      <UniqueIdentifier>{bb1045a0-d9e3-42be-a4fd-18b81c8107f6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\compute rain pos">
-      <UniqueIdentifier>{95b6de9b-31d9-4176-bba5-4017f07e4648}</UniqueIdentifier>
+    <Filter Include="texture">
+      <UniqueIdentifier>{6abb69ea-d62b-4eed-bb4c-4f1dbe671314}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\postprocess">
-      <UniqueIdentifier>{81fb9e95-325c-4ca7-aceb-b63f6a425afe}</UniqueIdentifier>
+    <Filter Include="buffer">
+      <UniqueIdentifier>{63fb4acf-90ac-4ab8-8843-0076013ded96}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\particles">
-      <UniqueIdentifier>{78fa237b-c438-4610-b3d5-2bcc136806d0}</UniqueIdentifier>
+    <Filter Include="shader_program">
+      <UniqueIdentifier>{25b8864d-1a1e-4128-9c2f-6e8473d771b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="camera">
+      <UniqueIdentifier>{f9657678-669c-49ef-b027-a72ca9448120}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{f3c07355-2bc9-4b1d-8076-e3f1bb36e852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\default">
+      <UniqueIdentifier>{77c23127-c220-4289-b587-a77f4a3c7f46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\particle">
+      <UniqueIdentifier>{64c37706-8989-4a0d-9d44-05dfe4431ca0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\postprocess">
+      <UniqueIdentifier>{d36f46eb-6933-42ac-a12c-0bcf77241a09}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source.cpp">
+    <ClCompile Include="src\Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="shader_program.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\util\random.cpp">
+      <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="texture2d.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\util\timer.cpp">
+      <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="frame_buffer.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\texture\depth_texture_2d.cpp">
+      <Filter>texture</Filter>
     </ClCompile>
-    <ClCompile Include="depth_texture_2d.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\texture\texture2d.cpp">
+      <Filter>texture</Filter>
     </ClCompile>
-    <ClCompile Include="timer.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\buffer\frame_buffer.cpp">
+      <Filter>buffer</Filter>
     </ClCompile>
-    <ClCompile Include="random.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\mesh\mesh.cpp">
+      <Filter>mesh</Filter>
     </ClCompile>
-    <ClCompile Include="render_buffer.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\mesh\mesh_indirect.cpp">
+      <Filter>mesh</Filter>
     </ClCompile>
-    <ClCompile Include="mesh.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\mesh\mesh_register.cpp">
+      <Filter>mesh</Filter>
     </ClCompile>
-    <ClCompile Include="mesh_indirect.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\camera\camera.cpp">
+      <Filter>camera</Filter>
     </ClCompile>
-    <ClCompile Include="camera.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\shader_program\shader_program.cpp">
+      <Filter>shader_program</Filter>
+    </ClCompile>
+    <ClCompile Include="src\buffer\vertex_array_buffer.cpp">
+      <Filter>buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\render_buffer.cpp">
+      <Filter>texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\buffer\shader_storage_buffer.cpp">
+      <Filter>buffer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="shader_program.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\util\random.h">
+      <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="texture2d.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\util\timer.h">
+      <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="i_texture.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\util\vectors.h">
+      <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="frame_buffer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\texture\depth_texture_2d.h">
+      <Filter>texture</Filter>
     </ClInclude>
-    <ClInclude Include="i_frame_buffer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\texture\i_texture.h">
+      <Filter>texture</Filter>
     </ClInclude>
-    <ClInclude Include="depth_texture_2d.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\texture\texture2d.h">
+      <Filter>texture</Filter>
     </ClInclude>
-    <ClInclude Include="timer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\buffer\element_buffer_object.h">
+      <Filter>buffer</Filter>
     </ClInclude>
-    <ClInclude Include="vectors.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\buffer\frame_buffer.h">
+      <Filter>buffer</Filter>
     </ClInclude>
-    <ClInclude Include="random.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\buffer\i_frame_buffer.h">
+      <Filter>buffer</Filter>
     </ClInclude>
-    <ClInclude Include="render_buffer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\buffer\vertex_buffer_object.h">
+      <Filter>buffer</Filter>
     </ClInclude>
-    <ClInclude Include="mesh.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\mesh\mesh.h">
+      <Filter>mesh</Filter>
     </ClInclude>
-    <ClInclude Include="vertex_buffer_object.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\mesh\mesh_indirect.h">
+      <Filter>mesh</Filter>
     </ClInclude>
-    <ClInclude Include="element_buffer_object.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\mesh\mesh_register.h">
+      <Filter>mesh</Filter>
     </ClInclude>
-    <ClInclude Include="mesh_indirect.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\camera\camera.h">
+      <Filter>camera</Filter>
     </ClInclude>
-    <ClInclude Include="camera.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\shader_program\shader_program.h">
+      <Filter>shader_program</Filter>
+    </ClInclude>
+    <ClInclude Include="src\buffer\vertex_array_buffer.h">
+      <Filter>buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\texture\render_buffer.h">
+      <Filter>texture</Filter>
+    </ClInclude>
+    <ClInclude Include="src\buffer\shader_storage_buffer.h">
+      <Filter>buffer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\default.frag">
-      <Filter>Shaders\default</Filter>
-    </None>
-    <None Include="shaders\default.vert">
-      <Filter>Shaders\default</Filter>
-    </None>
     <None Include="shaders\compute.glsl">
-      <Filter>Shaders\compute rain pos</Filter>
+      <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\postprocess.frag">
-      <Filter>Shaders\postprocess</Filter>
+    <None Include="shaders\default\default.frag">
+      <Filter>shaders\default</Filter>
     </None>
-    <None Include="shaders\postprocess.vert">
-      <Filter>Shaders\postprocess</Filter>
+    <None Include="shaders\default\default.vert">
+      <Filter>shaders\default</Filter>
     </None>
-    <None Include="particle.frag">
-      <Filter>Shaders\particles</Filter>
+    <None Include="shaders\particle\particle.frag">
+      <Filter>shaders\particle</Filter>
     </None>
-    <None Include="particle.vert">
-      <Filter>Shaders\particles</Filter>
+    <None Include="shaders\particle\particle.vert">
+      <Filter>shaders\particle</Filter>
+    </None>
+    <None Include="shaders\postprocess\postprocess.frag">
+      <Filter>shaders\postprocess</Filter>
+    </None>
+    <None Include="shaders\postprocess\postprocess.vert">
+      <Filter>shaders\postprocess</Filter>
     </None>
   </ItemGroup>
 </Project>

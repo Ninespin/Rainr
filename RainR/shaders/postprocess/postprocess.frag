@@ -3,7 +3,8 @@
 
 in vec2 uv;
 
-layout(bindless_sampler) uniform sampler2D uScreenTexture;
+
+uniform sampler2D uScreenTexture;
 
 out vec4 FragColor; 
 

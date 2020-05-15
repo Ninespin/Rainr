@@ -1,5 +1,5 @@
 #pragma once
-#include "i_texture.h"
+#include "texture/i_texture.h"
 
 /// Render buffers do not need to worry about internal format (uses internal gpu format)
 /// which makes them faster for off-screen renders.

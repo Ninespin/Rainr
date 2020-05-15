@@ -16,6 +16,7 @@ public:
 	TextureBase(GLenum texType)
 		: mTextureType(texType)
 		, mHandle(0)
+		, mResidencyHandle(0)
 	{
 		generate();
 	}
@@ -34,6 +35,16 @@ public:
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	void makeResident()
+	{
+		glMakeTextureHandleResidentARB(mResidencyHandle);
+	}
+
+	void makeNonResident()
+	{
+		glMakeTextureHandleNonResidentARB(mResidencyHandle);
+	}
+
 	void setParameter(GLenum parameter, GLint value) const
 	{
 		glTexParameteri(mTextureType, parameter, value);
@@ -48,12 +59,14 @@ protected:
 	void generate()
 	{
 		glGenTextures(1, &mHandle);
+		mResidencyHandle = glGetTextureHandleARB(mHandle);
 	}
 
 
 public:
-	GLuint mHandle;
 	GLenum mTextureType;
+	GLuint mHandle;
+	GLuint64 mResidencyHandle;
 
 };
 

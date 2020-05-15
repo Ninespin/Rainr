@@ -152,3 +152,8 @@ void ShaderProgram::setUniformMat4fv(const std::string& name, float* addr_p)
 	glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, addr_p);
 }
 
+void ShaderProgram::setUniformHandleUI(const std::string& name, GLuint64 handle)
+{
+	glUniformHandleui64ARB(getUniformLocation(name), handle);
+}
+

@@ -13,7 +13,7 @@ class MeshIndirect: public Mesh
 		GLuint baseInstance;
 	}DrawElementsIndirectCommand;
 public:
-	MeshIndirect(aiMesh& mesh, unsigned int numInstances = 1);
+	MeshIndirect(const aiMesh* mesh, unsigned int numInstances = 1);
 	~MeshIndirect();
 	void draw() override;
 

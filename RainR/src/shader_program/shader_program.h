@@ -2,7 +2,7 @@
 #include <string>
 #include <map>
 #include <GL/glew.h>
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 
 class ShaderProgram
@@ -31,6 +31,7 @@ public:
 	void setUniformVec4I(const std::string& name, int* addr_p);
 	void setUniformVec4UI(const std::string& name, unsigned int* addr_p);
 	void setUniformMat4fv(const std::string& name, float* addr_p);
+	void setUniformHandleUI(const std::string& name, GLuint64 handle);
 
 
 private:
