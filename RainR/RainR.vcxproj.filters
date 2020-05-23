@@ -39,6 +39,12 @@
     <Filter Include="shaders\postprocess">
       <UniqueIdentifier>{d36f46eb-6933-42ac-a12c-0bcf77241a09}</UniqueIdentifier>
     </Filter>
+    <Filter Include="render_pass">
+      <UniqueIdentifier>{61153313-166e-4086-988c-67302d8c1602}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="material">
+      <UniqueIdentifier>{8c19008a-f723-4507-9d8c-7d65adfee14a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Source.cpp">
@@ -82,6 +88,9 @@
     </ClCompile>
     <ClCompile Include="src\buffer\shader_storage_buffer.cpp">
       <Filter>buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render_pass\render_pass.cpp">
+      <Filter>render_pass</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -137,6 +146,15 @@
       <Filter>texture</Filter>
     </ClInclude>
     <ClInclude Include="src\buffer\shader_storage_buffer.h">
+      <Filter>buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render_pass\render_pass.h">
+      <Filter>render_pass</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material\MaterialData.h">
+      <Filter>material</Filter>
+    </ClInclude>
+    <ClInclude Include="src\buffer\uniform_buffer.h">
       <Filter>buffer</Filter>
     </ClInclude>
   </ItemGroup>

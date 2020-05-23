@@ -26,6 +26,8 @@
 #include "util/vectors.h"
 #include "buffer/vertex_array_buffer.h"
 #include "buffer/shader_storage_buffer.h"
+#include "material/MaterialData.h"
+#include "buffer/uniform_buffer.h"
 
 
 using namespace std::chrono_literals;
@@ -97,6 +99,8 @@ unsigned int STANDARD_QUAD_ELEMENT_DATA[] = {
 	0, 1, 2, 3
 };
 
+const unsigned int DEFAULT_MATERIAL_BIND_POINT = 1;
+
 
 const char* VERTEX_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default/default.vert";
 const char* FRAGMENT_SHADER_PATH = "C:/Users/jeremi/source/repos/RainR/RainR/shaders/default/default.frag";
@@ -106,6 +110,112 @@ float DELTA_TIME = 0;
 float LAST_FRAME_TIME = 0;
 std::map<int, bool> key_states;
 Camera camera = Camera(glm::radians(45.0f), WINDOW_ASPECT, 0.1f, 1000.0f);
+
+void GLAPIENTRY MessageCallback(GLenum source,
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar* message,
+	const void* userParam)
+{
+	std::string _source, _type, _severity;
+
+	switch (source) {
+	case GL_DEBUG_SOURCE_API:
+		_source = "API";
+		break;
+
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+		_source = "WINDOW SYSTEM";
+		break;
+
+	case GL_DEBUG_SOURCE_SHADER_COMPILER:
+		_source = "SHADER COMPILER";
+		break;
+
+	case GL_DEBUG_SOURCE_THIRD_PARTY:
+		_source = "THIRD PARTY";
+		break;
+
+	case GL_DEBUG_SOURCE_APPLICATION:
+		_source = "APPLICATION";
+		break;
+
+	case GL_DEBUG_SOURCE_OTHER:
+		_source = "UNKNOWN";
+		break;
+
+	default:
+		_source = "UNKNOWN";
+		break;
+	}
+
+	switch (type) {
+	case GL_DEBUG_TYPE_ERROR:
+		_type = "ERROR";
+		break;
+
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+		_type = "DEPRECATED BEHAVIOR";
+		break;
+
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+		_type = "UDEFINED BEHAVIOR";
+		break;
+
+	case GL_DEBUG_TYPE_PORTABILITY:
+		_type = "PORTABILITY";
+		break;
+
+	case GL_DEBUG_TYPE_PERFORMANCE:
+		_type = "PERFORMANCE";
+		break;
+
+	case GL_DEBUG_TYPE_OTHER:
+		_type = "OTHER";
+		break;
+
+	case GL_DEBUG_TYPE_MARKER:
+		_type = "MARKER";
+		break;
+
+	default:
+		_type = "UNKNOWN";
+		break;
+	}
+
+	switch (severity) {
+	case GL_DEBUG_SEVERITY_HIGH:
+		_severity = "HIGH";
+		break;
+
+	case GL_DEBUG_SEVERITY_MEDIUM:
+		_severity = "MEDIUM";
+		break;
+
+	case GL_DEBUG_SEVERITY_LOW:
+		_severity = "LOW";
+		break;
+
+	case GL_DEBUG_SEVERITY_NOTIFICATION:
+		_severity = "NOTIFICATION";
+		break;
+
+	default:
+		_severity = "UNKNOWN";
+		break;
+	}
+	if (type == GL_DEBUG_TYPE_ERROR) {
+		std::cout << "OpenGL error report: "
+			<< "\n  id: " << std::hex << id << std::dec
+			<< "\n  type: " << _type
+			<< "\n  severity: " << _severity
+			<< "\n  source: " << _source
+			<< "\n  message:\n  " << message
+			<< "\n\n" << std::endl;
+	}
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -188,6 +298,7 @@ GLFWwindow* create_window(const unsigned int wt = WINDOW_WT, const unsigned int 
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 	glfwSetKeyCallback(window, key_callback);
+
 	return window;
 }
 
@@ -209,24 +320,105 @@ void setup_ssbo(ShaderStorageBuffer<Vec4>& ssbo, Vec4 (*rand_fn)())
 
 
 
-void draw(aiNode& node, ShaderProgram& program, const aiMatrix4x4 parentMatrix = aiMatrix4x4())
+struct DrawEntry_t
+{
+	aiNode* node;
+	unsigned int modelMatrixIndex;
+	unsigned int materialIndex;
+	UniformBuffer<aiMatrix4x4>* modelUBO;
+	UniformBuffer<MaterialData>* materialUBO;
+};
+std::vector<DrawEntry_t> DRAW_QUEUE;
+
+void extract_materials(const aiScene& scene, UniformBuffer<MaterialData>& ubo)
+{
+	for(unsigned int i = 0; i < scene.mNumMaterials; i++)
+	{
+		aiMaterial* material = scene.mMaterials[i];
+		aiColor3D diffuse, ambient, specular, emissive;
+		float opacity, shininess, shininessStr;
+
+		MaterialData matData;
+		material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+		material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
+		material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
+		material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
+		std::cout << material->Get(AI_MATKEY_TRANSPARENCYFACTOR, opacity) << std::endl;
+		material->Get(AI_MATKEY_SHININESS, shininess);
+		material->Get(AI_MATKEY_SHININESS_STRENGTH, shininessStr);
+		matData.diffuse = { diffuse.r, diffuse.g, diffuse.b };
+		matData.ambient = { ambient.r, ambient.g, ambient.b };
+		matData.specular = { specular.r, specular.g, specular.b };
+		matData.emissive = { emissive.r, emissive.g, emissive.b };
+		matData.opacity = opacity;
+		matData.shininess = shininess;
+		matData.shininessStrength = shininessStr;
+		ubo.mData.push_back({ matData });
+		std::cout << "material: " << i 
+			<< "\n  diffuse: "<< matData.diffuse.x << " " << matData.diffuse.y << " " << matData.diffuse.z
+			<< "\n  ambient: " << matData.ambient.x << " " << matData.ambient.y << " " << matData.ambient.z
+			<< "\n  specular: " << matData.specular.x << " " << matData.specular.y << " " << matData.specular.z
+			<< "\n  emissive: " << matData.emissive.x << " " << matData.emissive.y << " " << matData.emissive.z
+			<< "\n  opacity: " << matData.opacity
+			<< "\n  shininess: " << matData.shininess
+			<< "\n  shininess str: " << matData.shininessStrength
+			<< std::endl;//*/
+		
+	}
+	ubo.recompile();
+	std::cout << "\nMaterial collection completed, " << ubo.mData.size() << " materials found!" << std::endl;
+}
+
+
+void extract_model_mats(aiNode& node, UniformBuffer<MaterialData>& materialUBO, UniformBuffer<aiMatrix4x4>& modelUBO, const aiMatrix4x4 parentMatrix = aiMatrix4x4())
 {
 	const aiMatrix4x4 temp = parentMatrix * node.mTransformation;
 	aiMatrix4x4 currentMatrix = temp;
 	currentMatrix.Transpose();
-	
-	program.setUniformMat4fv("uModelMat", &currentMatrix.a1);
+	modelUBO.mData.push_back({ currentMatrix });
+	/*
+	std::cout << "mat:\n  " << currentMatrix.a1 << " " << currentMatrix.a2 << " " << currentMatrix.a3 << " " << currentMatrix.a4
+				<< " \n  " << currentMatrix.b1 << " " << currentMatrix.b2 << " " << currentMatrix.b3 << " " << currentMatrix.b4
+				<< " \n  " << currentMatrix.c1 << " " << currentMatrix.c2 << " " << currentMatrix.c3 << " " << currentMatrix.c4
+				<< " \n  " << currentMatrix.d1 << " " << currentMatrix.d2 << " " << currentMatrix.d3 << " " << currentMatrix.d4
+				<< std::endl;*/
 
-	for(unsigned int i = 0; i < node.mNumMeshes; i++)
+	DrawEntry_t drawEntry = { &node, modelUBO.mData.size()-1, 12, &modelUBO, &materialUBO };
+	DRAW_QUEUE.push_back(drawEntry);
+
+	for (unsigned int i = 0; i < node.mNumChildren; i++)
 	{
-		MeshRegister::instance()->getMeshByIndex(node.mMeshes[i])->draw();
+		extract_model_mats(*node.mChildren[i], materialUBO, modelUBO, temp);
 	}
+}
 
+void draw(std::vector<DrawEntry_t> drawQueue)
+{
+	static unsigned int lastMatIndex = -1;
+	for(const auto& drawEntry: drawQueue)
+	{
+		drawEntry.modelUBO->bindRange(drawEntry.modelMatrixIndex);
 
+		for (unsigned int i = 0; i < drawEntry.node->mNumMeshes; i++)
+		{
+			Mesh* mesh = MeshRegister::instance()->getMeshByIndex(drawEntry.node->mMeshes[i]);
+
+			if (mesh->mMesh->mMaterialIndex != lastMatIndex)
+			{
+				drawEntry.materialUBO->bindRange(mesh->mMesh->mMaterialIndex);
+				lastMatIndex = mesh->mMesh->mMaterialIndex;
+			}
+
+			mesh->draw();
+		}
+	}
+	
+/*
 	for(unsigned int i = 0; i < node.mNumChildren; i++)
 	{
-		draw(*node.mChildren[i], program, temp);
+		draw(*node.mChildren[i], program, materialsUbo, modelMatUbo, ++index, temp);
 	}
+*/
 
 }
 
@@ -277,6 +469,7 @@ void run(GLFWwindow* window)
 	particleOffsetSsbo.bindAsVBO(1, 4, GL_FLOAT, false, 1);
 
 
+
 	// draw indirect buffer
 	DrawElementsIndirectCommand drawCommand = {4, NB_PARTICLES, 0, 0, 0};
 	GLuint indirect_buffer;
@@ -323,12 +516,18 @@ void run(GLFWwindow* window)
 	{
 		meshRegister->registerMesh(pScene->mMeshes[i], i);
 	}
-
+	UniformBuffer<MaterialData> materialsUBO = UniformBuffer<MaterialData>(DEFAULT_MATERIAL_BIND_POINT, GL_DYNAMIC_DRAW);
+	UniformBuffer<aiMatrix4x4> modelMatUBO = UniformBuffer<aiMatrix4x4>(0, GL_DYNAMIC_DRAW);
+	extract_materials(*pScene, materialsUBO);
+	extract_model_mats(*pScene->mRootNode, materialsUBO, modelMatUBO);
+	modelMatUBO.recompile();
+	std::cout << "done recompiling model matrix ubo. size: " << modelMatUBO.mData.size() << std::endl;
 
 	Timer timer;
 	glClearColor(0.670f, 0.698f, 0.709f, 1.0f);
 
-	glm::vec3 sun;
+	glm::vec3 sun = { -100, -100, 100 };
+
 
 	// main loop
 	while(!glfwWindowShouldClose(window))
@@ -344,33 +543,33 @@ void run(GLFWwindow* window)
 		process_input(window);
 
 		// update
-		sun = {
-			-100,
-			-100,
-			100
-		};
+
 
 		// compute shader update particle offsets
-		compute_program.useProgram();
+		/*compute_program.useProgram();
 		glDispatchComputeGroupSizeARB(
 			NB_WORKGROUPS_X, NB_WORKGROUPS_Y, 1,
 			WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); //needed in this context? //*/
 
 		// render offscreen
+
+		materialsUBO.bind();
 		frameBuffer.bind();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader_program.useProgram();
 		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
 		shader_program.setUniformVec3("uSunPos", glm::value_ptr(sun));
-		draw(*pScene->mRootNode, shader_program);
+		
+		draw(DRAW_QUEUE);
+		
 
-		particle_program.useProgram();
-		particle_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
-		particleVao.bind();
-		glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);//*/
+		//particle_program.useProgram();
+		//particle_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
+		//particleVao.bind();
+		//glDrawElementsIndirect(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, nullptr);//*/
 		frameBuffer.unbind();
-
+		materialsUBO.unbind();
 
 		// render onscreen
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -436,6 +635,10 @@ int main(int argc, char** argv)
 			<< ", " << max_group_size_y << ", " << max_group_size_z << std::endl;
 
 		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(MessageCallback, nullptr);
+
 
 		run(window);
 

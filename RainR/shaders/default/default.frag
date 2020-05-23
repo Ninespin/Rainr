@@ -7,14 +7,21 @@ in VertexData{
 out vec4 FragColor; 
 
 uniform vec3 uSunPos;
+
+layout(std140,binding=1) uniform MaterialBuffer {
+	vec3 diffuse;
+	vec3 specular;
+	vec3 ambient;
+	vec3 emissive;
+	float opacity;
+	float shininess;
+	float shininessStrength;
+} uMaterial;
+
 const float lightDissipationOffset = 0.3f;
-const float ambientIlluminance = 0.2f;
-
-
-
 
 void main()
 {
-	float illuminance = clamp(dot(normalize(vertexData.normal), normalize(uSunPos)) + lightDissipationOffset, ambientIlluminance, 1.0f);
-	FragColor = vertexData.color * illuminance;
+	float illuminance = dot(normalize(vertexData.normal), normalize(uSunPos)) + lightDissipationOffset;
+	FragColor = vertexData.color * vec4(uMaterial.diffuse, uMaterial.opacity) * illuminance + vec4(uMaterial.ambient, 0)+ vec4(uMaterial.emissive, 0);
 }
