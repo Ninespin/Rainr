@@ -28,6 +28,7 @@
 #include "buffer/shader_storage_buffer.h"
 #include "material/MaterialData.h"
 #include "buffer/uniform_buffer.h"
+#include <sstream>
 
 
 using namespace std::chrono_literals;
@@ -318,17 +319,53 @@ void setup_ssbo(ShaderStorageBuffer<Vec4>& ssbo, Vec4 (*rand_fn)())
 	ssbo.unmap();
 }
 
-
-
 struct DrawEntry_t
 {
 	aiNode* node;
+	unsigned int meshIndex;
 	unsigned int modelMatrixIndex;
 	unsigned int materialIndex;
 	UniformBuffer<aiMatrix4x4>* modelUBO;
-	UniformBuffer<MaterialData>* materialUBO;
 };
-std::vector<DrawEntry_t> DRAW_QUEUE;
+typedef std::vector<DrawEntry_t> DrawQueue_t;
+typedef std::map<unsigned int, DrawQueue_t> DrawQueueMatBatch_t;
+DrawQueueMatBatch_t MaterialDrawQueue;
+
+std::string mat4_to_string(const aiMatrix4x4& matrix)
+{
+	std::stringstream ss;
+	ss  << "matix 4x4:\n  " << matrix.a1 << " " << matrix.a2 << " " << matrix.a3 << " " << matrix.a4
+		<< " \n  " << matrix.b1 << " " << matrix.b2 << " " << matrix.b3 << " " << matrix.b4
+		<< " \n  " << matrix.c1 << " " << matrix.c2 << " " << matrix.c3 << " " << matrix.c4
+		<< " \n  " << matrix.d1 << " " << matrix.d2 << " " << matrix.d3 << " " << matrix.d4;
+	return ss.str();
+}
+
+std::string material_to_string(const MaterialData& matData)
+{
+	std::stringstream ss;
+	ss << "material: " 
+		<< "\n  diffuse: " << matData.diffuse.x << " " << matData.diffuse.y << " " << matData.diffuse.z
+		<< "\n  ambient: " << matData.ambient.x << " " << matData.ambient.y << " " << matData.ambient.z
+		<< "\n  specular: " << matData.specular.x << " " << matData.specular.y << " " << matData.specular.z
+		<< "\n  emissive: " << matData.emissive.x << " " << matData.emissive.y << " " << matData.emissive.z
+		<< "\n  opacity: " << matData.opacity
+		<< "\n  shininess: " << matData.shininess
+		<< "\n  shininess str: " << matData.shininessStrength;
+	return ss.str();
+}
+
+std::string drawEntry_to_string(const DrawEntry_t& drawEntry)
+{
+	std::stringstream ss;
+	ss << "draw entry: "
+		<< "\n  aiNode ptr: " << std::hex << drawEntry.node << std::dec
+		<< "\n  mesh index: " << drawEntry.meshIndex
+		<< "\n  model matrix index: " << drawEntry.modelMatrixIndex
+		<< "\n  material index: " << drawEntry.materialIndex
+		<< "\n  model matrix buffer ptr: " << std::hex << drawEntry.modelUBO << std::dec;
+	return ss.str();
+}
 
 void extract_materials(const aiScene& scene, UniformBuffer<MaterialData>& ubo)
 {
@@ -343,7 +380,7 @@ void extract_materials(const aiScene& scene, UniformBuffer<MaterialData>& ubo)
 		material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
 		material->Get(AI_MATKEY_COLOR_SPECULAR, specular);
 		material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
-		std::cout << material->Get(AI_MATKEY_TRANSPARENCYFACTOR, opacity) << std::endl;
+		material->Get(AI_MATKEY_TRANSPARENCYFACTOR, opacity);
 		material->Get(AI_MATKEY_SHININESS, shininess);
 		material->Get(AI_MATKEY_SHININESS_STRENGTH, shininessStr);
 		matData.diffuse = { diffuse.r, diffuse.g, diffuse.b };
@@ -354,72 +391,49 @@ void extract_materials(const aiScene& scene, UniformBuffer<MaterialData>& ubo)
 		matData.shininess = shininess;
 		matData.shininessStrength = shininessStr;
 		ubo.mData.push_back({ matData });
-		std::cout << "material: " << i 
-			<< "\n  diffuse: "<< matData.diffuse.x << " " << matData.diffuse.y << " " << matData.diffuse.z
-			<< "\n  ambient: " << matData.ambient.x << " " << matData.ambient.y << " " << matData.ambient.z
-			<< "\n  specular: " << matData.specular.x << " " << matData.specular.y << " " << matData.specular.z
-			<< "\n  emissive: " << matData.emissive.x << " " << matData.emissive.y << " " << matData.emissive.z
-			<< "\n  opacity: " << matData.opacity
-			<< "\n  shininess: " << matData.shininess
-			<< "\n  shininess str: " << matData.shininessStrength
-			<< std::endl;//*/
+		//std::cout << material_to_string(matData) << std::endl;
 		
 	}
 	ubo.recompile();
 	std::cout << "\nMaterial collection completed, " << ubo.mData.size() << " materials found!" << std::endl;
 }
 
-
-void extract_model_mats(aiNode& node, UniformBuffer<MaterialData>& materialUBO, UniformBuffer<aiMatrix4x4>& modelUBO, const aiMatrix4x4 parentMatrix = aiMatrix4x4())
+void extract_model_mats(const aiScene& scene, aiNode& node, UniformBuffer<MaterialData>& materialUBO, UniformBuffer<aiMatrix4x4>& modelUBO, const aiMatrix4x4 parentMatrix = aiMatrix4x4())
 {
 	const aiMatrix4x4 temp = parentMatrix * node.mTransformation;
 	aiMatrix4x4 currentMatrix = temp;
 	currentMatrix.Transpose();
 	modelUBO.mData.push_back({ currentMatrix });
-	/*
-	std::cout << "mat:\n  " << currentMatrix.a1 << " " << currentMatrix.a2 << " " << currentMatrix.a3 << " " << currentMatrix.a4
-				<< " \n  " << currentMatrix.b1 << " " << currentMatrix.b2 << " " << currentMatrix.b3 << " " << currentMatrix.b4
-				<< " \n  " << currentMatrix.c1 << " " << currentMatrix.c2 << " " << currentMatrix.c3 << " " << currentMatrix.c4
-				<< " \n  " << currentMatrix.d1 << " " << currentMatrix.d2 << " " << currentMatrix.d3 << " " << currentMatrix.d4
-				<< std::endl;*/
+	
+	//std::cout << mat4_to_string(currentMatrix) << std::endl;
 
-	DrawEntry_t drawEntry = { &node, modelUBO.mData.size()-1, 12, &modelUBO, &materialUBO };
-	DRAW_QUEUE.push_back(drawEntry);
+	// fill draw queue using material batching
+	for(unsigned int i = 0; i < node.mNumMeshes; i++)
+	{
+		const unsigned int materialIndex = scene.mMeshes[node.mMeshes[i]]->mMaterialIndex;
+		DrawEntry_t drawEntry = { &node, node.mMeshes[i], modelUBO.mData.size() - 1, materialIndex, &modelUBO };
+		MaterialDrawQueue[ materialIndex ].push_back(drawEntry);
+		//std::cout << drawEntry_to_string(drawEntry) << std::endl;
+	}
 
 	for (unsigned int i = 0; i < node.mNumChildren; i++)
 	{
-		extract_model_mats(*node.mChildren[i], materialUBO, modelUBO, temp);
+		extract_model_mats(scene, *node.mChildren[i], materialUBO, modelUBO, temp);
 	}
 }
 
-void draw(std::vector<DrawEntry_t> drawQueue)
+void draw(DrawQueueMatBatch_t& drawQueue, UniformBuffer<MaterialData>& materialBuffer)
 {
-	static unsigned int lastMatIndex = -1;
-	for(const auto& drawEntry: drawQueue)
+	for(const auto& materialBatch: drawQueue)
 	{
-		drawEntry.modelUBO->bindRange(drawEntry.modelMatrixIndex);
-
-		for (unsigned int i = 0; i < drawEntry.node->mNumMeshes; i++)
+		materialBuffer.bindRange(materialBatch.first);
+		for(const auto& drawEntry: materialBatch.second)
 		{
-			Mesh* mesh = MeshRegister::instance()->getMeshByIndex(drawEntry.node->mMeshes[i]);
-
-			if (mesh->mMesh->mMaterialIndex != lastMatIndex)
-			{
-				drawEntry.materialUBO->bindRange(mesh->mMesh->mMaterialIndex);
-				lastMatIndex = mesh->mMesh->mMaterialIndex;
-			}
-
+			drawEntry.modelUBO->bindRange(drawEntry.modelMatrixIndex);
+			Mesh* mesh = MeshRegister::instance()->getMeshByIndex(drawEntry.meshIndex);//MeshRegister::instance()->getMeshByIndex(drawEntry.node->mMeshes[i]);
 			mesh->draw();
 		}
 	}
-	
-/*
-	for(unsigned int i = 0; i < node.mNumChildren; i++)
-	{
-		draw(*node.mChildren[i], program, materialsUbo, modelMatUbo, ++index, temp);
-	}
-*/
-
 }
 
 void run(GLFWwindow* window)
@@ -519,7 +533,7 @@ void run(GLFWwindow* window)
 	UniformBuffer<MaterialData> materialsUBO = UniformBuffer<MaterialData>(DEFAULT_MATERIAL_BIND_POINT, GL_DYNAMIC_DRAW);
 	UniformBuffer<aiMatrix4x4> modelMatUBO = UniformBuffer<aiMatrix4x4>(0, GL_DYNAMIC_DRAW);
 	extract_materials(*pScene, materialsUBO);
-	extract_model_mats(*pScene->mRootNode, materialsUBO, modelMatUBO);
+	extract_model_mats(*pScene, *pScene->mRootNode, materialsUBO, modelMatUBO);
 	modelMatUBO.recompile();
 	std::cout << "done recompiling model matrix ubo. size: " << modelMatUBO.mData.size() << std::endl;
 
@@ -561,7 +575,7 @@ void run(GLFWwindow* window)
 		shader_program.setUniformMat4fv("uViewProj", camera.getViewProjection());
 		shader_program.setUniformVec3("uSunPos", glm::value_ptr(sun));
 		
-		draw(DRAW_QUEUE);
+		draw(MaterialDrawQueue, materialsUBO);
 		
 
 		//particle_program.useProgram();
